@@ -1,0 +1,4 @@
+[
+  { "key": "work", "label": "Work", "description": "Operational work briefing" },
+  { "key": "news", "label": "News", "description": "AI landscape news briefing" }
+]

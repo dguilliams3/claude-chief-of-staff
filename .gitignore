@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.wrangler/
+.dev.vars
+setup-run/
+local/*
+!local/README.md
+agent/sessions.json
+agent/briefings/*.json
+server/worker/wrangler.toml
+app/.env.production
+
+# Claude agent run directories (local only -- contents never committed)
+runs/
+!runs/.gitkeep
+!runs/CLAUDE-RUNS/.gitkeep
+!runs/CLAUDE-RUNS/ARCHIVE.md
+!runs/CLAUDE-RUNS/init-run.sh

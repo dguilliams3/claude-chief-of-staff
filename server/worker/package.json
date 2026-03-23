@@ -1,0 +1,19 @@
+{
+  "name": "server-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@block65/webcrypto-web-push": "^1.0.2",
+    "drizzle-orm": "^0.45.1",
+    "hono": "^4.12.5"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260305.1",
+    "drizzle-kit": "^0.31.9",
+    "wrangler": "^4.71.0"
+  }
+}

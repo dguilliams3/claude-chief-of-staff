@@ -1,0 +1,20 @@
+{
+  "name": "claude-chief-of-staff",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "app",
+    "server/local",
+    "server/worker",
+    "agent"
+  ],
+  "scripts": {
+    "start": "concurrently -n api,tunnel -c blue,green \"npx tsx server/local/server.ts\" \"cloudflared tunnel run cos-tunnel\"",
+    "test": "npm run test --workspace=agent && npm run test --workspace=app",
+    "typecheck": "tsc --noEmit -p agent/tsconfig.json && tsc --noEmit -p app/tsconfig.app.json",
+    "build": "npm run build --workspace=app"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
