@@ -73,15 +73,15 @@ TOTAL_TAGS=$((UPSTREAM + DOWNSTREAM + TESTED_BY + SEE_ALSO + DO_NOT))
 echo "Cross-reference tags: $TOTAL_TAGS (Upstream: $UPSTREAM, Downstream: $DOWNSTREAM, Tested by: $TESTED_BY, See also: $SEE_ALSO, Do NOT: $DO_NOT)"
 echo ""
 
-# 7. TypeScript errors
+# 7. TypeScript errors (uses per-workspace typecheck, not bare tsc)
 echo "--- TypeScript Errors ---"
-TS_ERRORS=$(npx tsc --noEmit 2>&1 | grep "error TS" | wc -l)
+TS_ERRORS=$(npm run typecheck 2>&1 | grep "error TS" | wc -l)
 echo "TS errors: $TS_ERRORS"
 echo ""
 
-# 8. Test count
+# 8. Test count (runs per-workspace via npm test)
 echo "--- Test Count ---"
-npx vitest run --reporter=default 2>&1 | grep -E "Tests.*passed" || echo "Tests: run manually"
+npm test 2>&1 | grep -E "Tests.*passed" || echo "Tests: run manually"
 echo ""
 
 # 9. File/line counts

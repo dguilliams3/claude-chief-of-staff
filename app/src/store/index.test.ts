@@ -53,6 +53,10 @@ vi.mock('@/lib/polling', () => ({
   stopAllPolling: vi.fn(),
 }));
 
+vi.mock('@/lib/push', () => ({
+  subscribeToPush: vi.fn(),
+}));
+
 import { validateAuthToken } from '@/lib/api';
 import { fetchBriefings } from '@/domain/briefing';
 
@@ -85,7 +89,7 @@ afterEach(() => {
 describe('subscribe hydration', () => {
   it('calls silentRefresh (fetchBriefings) when authenticated transitions false→true via login', async () => {
     // Import the real store — this triggers module-level subscribe()
-    const { useStore } = await import('@/store/index');
+    const { useStore } = await import('./index');
 
     // fetchBriefings is called by silentRefresh (via fetchAndSet)
     mockFetchBriefings.mockResolvedValue({});

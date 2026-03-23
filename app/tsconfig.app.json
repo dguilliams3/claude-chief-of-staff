@@ -6,6 +6,9 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "types": ["vite/client"],
+    // skipLibCheck: vite/client types pull in lib.webworker.d.ts which conflicts with lib.dom.d.ts.
+    // All errors are in TS's own lib files, not our code. Standard for Vite + service worker projects.
+    // Do NOT use skipLibCheck elsewhere as a bandaid for type errors in our own code.
     "skipLibCheck": true,
 
     /* Bundler mode */

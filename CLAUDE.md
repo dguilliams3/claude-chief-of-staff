@@ -137,6 +137,12 @@ store/      → types/, api.ts
 api.ts      → types/ only
 ```
 
+### TypeScript `skipLibCheck` Policy
+
+`skipLibCheck: true` is permitted ONLY when all errors are inside third-party `.d.ts` files (e.g., drizzle-orm shipping broken types for unused drivers, or Vite's DOM/WebWorker type conflicts). Each tsconfig that uses it MUST have a comment explaining which library causes the errors and why.
+
+**Do NOT use `skipLibCheck` to suppress type errors in our own code.** If our code has a type error, fix the type — don't skip the check.
+
 ### Adding a New Briefing Type
 
 1. CREATE `agent/briefings/<type>/config.ts` — export a `Prompt` config

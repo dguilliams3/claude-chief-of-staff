@@ -61,7 +61,7 @@ export async function sendPushToAll(
       // subscription: { endpoint, keys: { p256dh, auth } }
       // vapid: { subject, publicKey, privateKey }
       const { headers, body } = await buildPushPayload(
-        { data: payload as unknown as Record<string, unknown> },
+        { data: payload as PushPayload & Record<string, string | undefined> },
         subscription,
         {
           subject: vapid.subject,
