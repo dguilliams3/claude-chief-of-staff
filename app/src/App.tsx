@@ -9,12 +9,12 @@
  * See also: `app/src/store/index.ts` -- auth and view state consumed here
  * Do NOT: Add React Router -- view switching is intentionally store-driven
  */
-import { useStore } from '@/store';
-import { AppHeader } from '@/components/AppHeader';
-import { TodayView } from '@/views/TodayView';
-import { HistoryView } from '@/views/HistoryView';
-import { ChatsView } from '@/views/ChatsView';
-import { LoginScreen } from '@/views/LoginScreen';
+import { useStore } from "@/store";
+import { AppHeader } from "@/components/AppHeader";
+import { TodayView } from "@/views/TodayView";
+import { HistoryView } from "@/views/HistoryView";
+import { ChatsView } from "@/views/ChatsView";
+import { LoginScreen } from "@/views/LoginScreen";
 
 /**
  * Root component that gates on authentication state.
@@ -55,17 +55,20 @@ function AppShell() {
     );
   }
 
-  // ChatsView needs a fixed-height flex container so ConversationDetail's
-  // h-full layout constrains properly (header stays pinned, messages scroll).
-  // TodayView and HistoryView use page scrolling, so they get min-h-dvh.
-  const isChats = view === 'chats';
+  // TodayView and ChatsView use app-shell layout (fixed-height flex container
+  // with internal scrolling) so bottom bars stay pinned without position: sticky,
+  // which is unreliable on mobile browsers when the address bar resizes the viewport.
+  // HistoryView has no bottom bar and uses regular page scrolling.
+  const needsAppShell = view === "today" || view === "chats";
 
   return (
-    <div className={`bg-background ${isChats ? 'h-dvh flex flex-col' : 'min-h-dvh'}`}>
+    <div
+      className={`bg-background ${needsAppShell ? "h-dvh flex flex-col" : "min-h-dvh"}`}
+    >
       <AppHeader />
-      {view === 'today' && <TodayView />}
-      {view === 'history' && <HistoryView />}
-      {isChats && (
+      {view === "today" && <TodayView />}
+      {view === "history" && <HistoryView />}
+      {view === "chats" && (
         <div className="flex-1 overflow-hidden">
           <ChatsView />
         </div>

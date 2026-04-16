@@ -1,8 +1,8 @@
-import type { BriefingSection } from '@/domain/briefing';
-import { useStore } from '@/store';
-import { SectionCard } from '@/components/SectionCard';
-import { FollowUpBar } from '@/components/FollowUpBar';
-import { RunningBanner } from '@/components/RunningBanner';
+import type { BriefingSection } from "@/domain/briefing";
+import { useStore } from "@/store";
+import { SectionCard } from "@/components/SectionCard";
+import { FollowUpBar } from "@/components/FollowUpBar";
+import { RunningBanner } from "@/components/RunningBanner";
 
 export function TodayView() {
   const activeType = useStore((s) => s.activeType);
@@ -14,7 +14,7 @@ export function TodayView() {
   // Empty state — no briefing for this type
   if (!briefing) {
     return (
-      <div className="flex flex-col min-h-[calc(100dvh-80px)]">
+      <div className="flex-1 flex flex-col min-h-0">
         {showBanner && <RunningBanner />}
         {!showBanner && (
           <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
@@ -41,20 +41,20 @@ export function TodayView() {
     );
   }
 
-  const allInfo = briefing.sections.every(s => s.severity === 'info');
+  const allInfo = briefing.sections.every((s) => s.severity === "info");
 
   const isDefaultOpen = (section: BriefingSection, index: number) => {
-    if (section.severity === 'flag' || section.severity === 'warn') return true;
+    if (section.severity === "flag" || section.severity === "warn") return true;
     if (allInfo && index < 2) return true;
     if (index === 0) return true;
     return false;
   };
 
   return (
-    <div className="flex flex-col min-h-[calc(100dvh-80px)]">
+    <div className="flex-1 flex flex-col min-h-0">
       {showBanner && <RunningBanner />}
 
-      <main className="flex-1 px-4 py-4 space-y-4 max-w-2xl mx-auto w-full">
+      <main className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-4 max-w-2xl mx-auto w-full">
         {briefing.sections.map((section, i) => (
           <SectionCard
             key={section.key}

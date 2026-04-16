@@ -12,13 +12,13 @@
  * See also: `app/src/components/FollowUpBar/ChatPicker.tsx` -- conversation switcher
  * Do NOT: Fetch data directly -- store handles the API call and state updates
  */
-import { useEffect } from 'react';
-import { useStore } from '@/store';
-import { ChatThread, ChatInput } from '@/components/ChatThread';
-import { EMPTY_HISTORY } from '@/domain/conversation/constants';
-import { DrawerHandle } from './DrawerHandle';
-import { ChatPicker } from './ChatPicker';
-import { useDrawer } from './hooks/useDrawer';
+import { useEffect } from "react";
+import { useStore } from "@/store";
+import { ChatThread, ChatInput } from "@/components/ChatThread";
+import { EMPTY_HISTORY } from "@/domain/conversation/constants";
+import { DrawerHandle } from "./DrawerHandle";
+import { ChatPicker } from "./ChatPicker";
+import { useDrawer } from "./hooks/useDrawer";
 
 /**
  * Sticky bottom bar with expandable chat drawer for follow-up conversations.
@@ -35,17 +35,26 @@ import { useDrawer } from './hooks/useDrawer';
  * Downstream: `app/src/store/conversationSlice.ts::sendFollowUp`, `hydrateFollowUpHistory`
  * Do NOT: Fetch data directly — store handles API calls and state updates
  */
-export function FollowUpBar({ briefingId, sessionId }: { briefingId: string; sessionId: string }) {
+export function FollowUpBar({
+  briefingId,
+  sessionId,
+}: {
+  briefingId: string;
+  sessionId: string;
+}) {
   const activeConversationId = useStore((s) => s.activeConversationId);
   // History is keyed by conversationId (not briefingId) to prevent multi-chat collision.
   // Falls back to briefingId only before hydration sets the activeConversationId.
   const historyKey = activeConversationId || briefingId;
-  const history = useStore((s) => s.followUpHistory[historyKey] ?? EMPTY_HISTORY);
+  const history = useStore(
+    (s) => s.followUpHistory[historyKey] ?? EMPTY_HISTORY,
+  );
   const isHydrating = useStore((s) => s.followUpHydrating[briefingId] ?? false);
   const pendingFollowUp = useStore((s) => s.pendingFollowUp);
   const sendFollowUp = useStore((s) => s.sendFollowUp);
   const hydrateFollowUpHistory = useStore((s) => s.hydrateFollowUpHistory);
-  const loading = !!pendingFollowUp && pendingFollowUp.historyKey === historyKey;
+  const loading =
+    !!pendingFollowUp && pendingFollowUp.historyKey === historyKey;
   const prefillQuestion = useStore((s) => s.prefillQuestion);
   const setPrefillQuestion = useStore((s) => s.setPrefillQuestion);
 
@@ -77,13 +86,15 @@ export function FollowUpBar({ briefingId, sessionId }: { briefingId: string; ses
         />
       )}
 
-      <div className={`
-        sticky bottom-0 z-10
+      <div
+        className={`
+        shrink-0 z-10
         bg-background/80 backdrop-blur-xl
         border-t border-border-subtle
         safe-bottom
         transition-all duration-300 ease-out
-      `}>
+      `}
+      >
         {/* Drawer handle -- visible when there's history to expand */}
         {hasContent && (
           <DrawerHandle isExpanded={isExpanded} onToggle={toggle} />
@@ -92,8 +103,15 @@ export function FollowUpBar({ briefingId, sessionId }: { briefingId: string; ses
         {/* Chat history -- only visible when expanded */}
         {isExpanded && hasContent && (
           <div className="max-h-[70dvh] overflow-y-auto overscroll-y-contain px-4 pt-2 pb-2">
-            {isHydrating && <p className="text-xs text-muted px-2">Loading history...</p>}
-            <ChatThread messages={history} showTimestamps={false} isLoading={loading} loadingStartedAt={pendingFollowUp?.startedAt} />
+            {isHydrating && (
+              <p className="text-xs text-muted px-2">Loading history...</p>
+            )}
+            <ChatThread
+              messages={history}
+              showTimestamps={false}
+              isLoading={loading}
+              loadingStartedAt={pendingFollowUp?.startedAt}
+            />
           </div>
         )}
 
