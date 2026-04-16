@@ -9,11 +9,13 @@ describe('briefing registry', () => {
     expect(validTypes.sort()).toEqual(Object.keys(briefingTypes).sort());
   });
 
-  it('contains expected work and news metadata', () => {
+  it('contains expected work, news, and community metadata', () => {
     expect(briefingTypes.work.label).toBe('Work');
     expect(briefingTypes.news.label).toBe('News');
+    expect(briefingTypes.community.label).toBe('Community');
     expect(briefingTypes.work.prompt.name).toBe('work');
     expect(briefingTypes.news.prompt.name).toBe('news');
+    expect(briefingTypes.community.prompt.name).toBe('community');
   });
 
   it('uses default timeout for all registered briefings', () => {

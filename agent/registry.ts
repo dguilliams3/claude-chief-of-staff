@@ -11,6 +11,8 @@
 import type { Prompt } from './prompts/types';
 import { work } from './briefings/work/config';
 import { news } from './briefings/news/config';
+import { community } from './prompts/community';
+import { readLocalOverride } from './local-config';
 import briefingTypesMeta from '../shared/briefing-types.json';
 
 /** Default timeout for briefing generation (10 minutes). MCP queries can be slow. */
@@ -24,8 +26,53 @@ export interface BriefingTypeConfig {
   sourcesSampled: string[];
 }
 
-/** Shared display metadata — single source of truth for type labels/descriptions. */
-const metaByKey = Object.fromEntries(briefingTypesMeta.map(t => [t.key, t]));
+interface BriefingTypeMeta {
+  key: string;
+  label: string;
+  description: string;
+}
+
+/**
+ * Merge tracked briefing metadata with optional local overrides/additions.
+ * Local entries dedupe by `key` and take precedence.
+ */
+function loadBriefingTypes(): BriefingTypeMeta[] {
+  const shared = briefingTypesMeta as BriefingTypeMeta[];
+  const localRaw = readLocalOverride('briefing-types.json');
+  if (!localRaw) return shared;
+
+  try {
+    const localTypes = JSON.parse(localRaw) as unknown;
+    if (!Array.isArray(localTypes)) return shared;
+
+    const merged = [...shared];
+    for (const maybeType of localTypes) {
+      if (!maybeType || typeof maybeType !== 'object') continue;
+
+      const localType = maybeType as Partial<BriefingTypeMeta>;
+      if (
+        typeof localType.key !== 'string' ||
+        typeof localType.label !== 'string' ||
+        typeof localType.description !== 'string'
+      ) {
+        continue;
+      }
+
+      const idx = merged.findIndex((entry) => entry.key === localType.key);
+      if (idx >= 0) {
+        merged[idx] = localType as BriefingTypeMeta;
+      } else {
+        merged.push(localType as BriefingTypeMeta);
+      }
+    }
+    return merged;
+  } catch {
+    return shared;
+  }
+}
+
+const mergedBriefingTypesMeta = loadBriefingTypes();
+const metaByKey = Object.fromEntries(mergedBriefingTypesMeta.map((t) => [t.key, t]));
 
 export const briefingTypes: Record<string, BriefingTypeConfig> = {
   work: {
@@ -41,6 +88,13 @@ export const briefingTypes: Record<string, BriefingTypeConfig> = {
     label: metaByKey.news.label,
     timeoutMs: DEFAULT_BRIEFING_TIMEOUT_MS,
     sourcesSampled: ['huggingface', 'web'],
+  },
+  community: {
+    prompt: community,
+    description: metaByKey.community.description,
+    label: metaByKey.community.label,
+    timeoutMs: DEFAULT_BRIEFING_TIMEOUT_MS,
+    sourcesSampled: ['configured-feeds', 'web'],
   },
 };
 
