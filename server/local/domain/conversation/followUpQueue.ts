@@ -131,6 +131,21 @@ export function getFollowUpJob(jobId: string): FollowUpJob | undefined {
   return jobs.get(jobId);
 }
 
+/**
+ * Counts currently-running follow-up jobs. Used by the rate-limit middleware
+ * to enforce the global concurrent cap without circular imports.
+ *
+ * Downstream: `server/local/middleware/rateLimit.ts::createFollowUpRateLimit`
+ *             — injected as thunk at route-mount time.
+ */
+export function getActiveFollowUpCount(): number {
+  let count = 0;
+  for (const job of jobs.values()) {
+    if (job.status === 'running') count++;
+  }
+  return count;
+}
+
 function scheduleExpiry(jobId: string): void {
   setTimeout(() => jobs.delete(jobId), RETENTION_MS);
 }

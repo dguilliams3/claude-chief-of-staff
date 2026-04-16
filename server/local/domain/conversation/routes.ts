@@ -23,7 +23,14 @@ import { Hono } from 'hono';
 import { callClaude, buildClaudeArgs, ClaudeCliError } from '../../../../agent/claude-cli';
 import { logger } from '../../../../agent/logger';
 import { readLocalOverride } from '../../../../agent/local-config';
-import { enqueueFollowUp, completeFollowUp, failFollowUp, getFollowUpJob } from './followUpQueue';
+import {
+  enqueueFollowUp,
+  completeFollowUp,
+  failFollowUp,
+  getFollowUpJob,
+  getActiveFollowUpCount,
+} from './followUpQueue';
+import { createFollowUpRateLimit, getParsedBody } from '../../middleware/rateLimit';
 import { createBriefingTriggerRoutes } from '../briefing';
 import { parseCliUsage } from '../../../../agent/parse-cli-usage';
 
@@ -129,15 +136,14 @@ export function createClaudeRoutes() {
    * Downstream: `agent/claude-cli.ts` — callClaude / buildClaudeArgs
    * Downstream: `server/local/domain/conversation/followUpQueue.ts` — job lifecycle
    */
-  app.post('/follow-up', async (c) => {
-    const body = await c.req.json<{
-      sessionId?: string;
-      question: string;
-      newSession?: boolean;
-      conversationId?: string;
-      briefingId?: string;
-      isNewSession?: boolean;
-    }>();
+  app.post('/follow-up', createFollowUpRateLimit(getActiveFollowUpCount), async (c) => {
+    // Rate-limit middleware has already parsed + validated the body.
+    // getParsedBody() retrieves it without re-parsing.
+    const body = getParsedBody(c.req.raw);
+    if (!body) {
+      // Should never happen — middleware stashes it before passing Next().
+      return c.json({ error: 'rate-limit middleware did not stash body' }, 500);
+    }
     const { question, newSession } = body;
     const sessionId = body.sessionId;
 
