@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      # Fork uses npm workspaces (app, server/local, server/worker, agent)
+      # so a single root `npm ci` installs everything.
+      - name: Install dependencies
+        run: npm ci
+
+      # Runs agent + app tests (see package.json test script)
+      - name: Run tests
+        run: npm test
+
+      # Typechecks all 4 workspaces (agent, app, server/worker, server/local)
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Builds the app (Vite + PWA plugin)
+      - name: Build app
+        run: npm run build
