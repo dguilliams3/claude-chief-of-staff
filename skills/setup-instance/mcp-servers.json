@@ -17,8 +17,9 @@
     "ms365": {
       "label": "Microsoft 365 (email, calendar, Teams)",
       "cliName": "ms365",
-      "sseUrl": "https://mcp.ms365.com/sse",
-      "description": "Outlook mail, calendar events, Teams messages. OAuth via Microsoft account."
+      "sseUrl": null,
+      "manualSetup": "Microsoft does not publish a hosted MCP endpoint at a stable public URL as of 2026-04. To connect MS365, install a community MCP server locally (e.g., `microsoft-365-mcp` or similar) and register it with `claude mcp add ms365 -- npx -y <package-name>`. See the MCP registry at https://mcpservers.org or Anthropic's docs for current options.",
+      "description": "Outlook mail, calendar events, Teams messages. No hosted MCP; configure a local MCP server during setup."
     }
   }
 }

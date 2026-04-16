@@ -246,18 +246,27 @@ _Goal: Connect Claude Code to the user's selected data sources via MCP._
    source of truth for MCP provider URLs — edit that file when a provider
    rotates endpoints; don't inline URLs in this skill).
 
-   For each selected data source in Phase 0, run:
+   For each selected data source in Phase 0:
+
+   **If the registry entry has a non-null `sseUrl`** — hosted MCP, use `mcp-remote`:
 
    ```
    claude mcp add <cliName> -- npx -y @anthropic-ai/mcp-remote@latest <sseUrl>
    ```
 
-   where `<cliName>` and `<sseUrl>` come from the corresponding entry in
-   `mcp-servers.json`. Available entries at time of this skill version:
+   **If the registry entry has `sseUrl: null`** (no hosted MCP available) — follow the
+   `manualSetup` instructions on the entry. Typically this means installing a
+   community MCP server package locally, then registering it:
 
-   - **Jira / Confluence (Atlassian):** `atlassian` → `https://mcp.atlassian.com/v1/sse`
-   - **Fireflies:** `fireflies` → `https://mcp.fireflies.ai/sse`
-   - **MS365:** `ms365` → `https://mcp.ms365.com/sse`
+   ```
+   claude mcp add <cliName> -- npx -y <local-mcp-package-name>
+   ```
+
+   Available entries at time of this skill version:
+
+   - **Jira / Confluence (Atlassian):** `atlassian` → hosted `https://mcp.atlassian.com/v1/sse`
+   - **Fireflies:** `fireflies` → hosted `https://mcp.fireflies.ai/sse`
+   - **MS365:** `ms365` → no hosted MCP available — community local MCP server required (see registry `manualSetup` field)
 
    **Verify first:** before running `claude mcp add <cliName>`, run
    `claude mcp list` and skip the add if the server is already present

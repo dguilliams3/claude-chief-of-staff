@@ -32,8 +32,6 @@ set -euo pipefail
 # depersonalization).
 WHITELIST=(
   "scripts/check-depersonalization.sh"
-  "docs/UPSTREAM_SYNC.md"
-  "docs/DEPERSONALIZATION.md"
 )
 
 # Regex union of forbidden patterns.
