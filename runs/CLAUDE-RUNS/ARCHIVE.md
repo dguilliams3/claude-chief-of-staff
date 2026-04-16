@@ -50,6 +50,43 @@ Run `bash scripts/health-pulse.sh` and capture output.
 
 ---
 
+### [RUN-20260323-1728] Fix TS errors across all workspaces + failing test
+
+**Archived:** 2026-03-23 18:10 EST
+**Created:** 2026-03-23 17:28 EST
+**Completed:** 2026-03-23 18:04 EST
+**Duration:** ~36 minutes
+**Working Directory:** `runs/CLAUDE-RUNS/RUN-20260323-1728-fix-ts-errors-and-test/`
+
+#### Codebase Health Pulse
+
+| Metric               | Value                                                                |
+| -------------------- | -------------------------------------------------------------------- |
+| Code duplication     | N/A (jscpd not installed)                                            |
+| Source statements    | 8,266                                                                |
+| Test statements      | 3,087                                                                |
+| Test:source ratio    | 0.37                                                                 |
+| Docstring:code ratio | 0.44                                                                 |
+| Cross-reference tags | 263 (Upstream: 64, Downstream: 42, Tested by: 15, See also: 90, Do NOT: 52) |
+| TS errors            | 0                                                                    |
+| Test count           | 227 passed (100 agent + 127 app)                                     |
+| Total TS files       | 150                                                                  |
+| Total lines          | 13,156                                                               |
+| D1 tables            | 7                                                                    |
+
+**Summary:**
+Expanded `npm run typecheck` to cover all 4 workspaces (was only agent + app). Fixed server/local tsconfig (bundler resolution, domain includes), server/worker push type cast, app store test (dynamic import + missing mock). Established skipLibCheck policy with WHY comments in every tsconfig and convention in CLAUDE.md. Fixed health-pulse.sh to use workspace-aware commands.
+
+**Deliverables:**
+- 9 files modified (see TASK_LOG.md for full list)
+- TS errors: 483 → 0
+- Failing tests: 1 → 0
+- skipLibCheck policy codified in CLAUDE.md + per-tsconfig comments
+
+**Outcome:** Complete. Committed as 6599813, pushed to origin/main. Worker deploy not attempted (wrangler.toml not configured on this repo).
+
+---
+
 ### [RUN-20260323-1656] Rename repo astral → claude-chief-of-staff
 
 **Archived:** 2026-03-23 17:05 EST
