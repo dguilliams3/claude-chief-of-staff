@@ -9,7 +9,7 @@
 -- Endpoint is the browser's push service URL; p256dh and auth are
 -- the encryption keys needed to send encrypted push messages.
 --
--- Apply: cd worker && npx wrangler d1 execute cos-briefings --remote --file=./migrations/0005_create_push_subscriptions.sql
+-- Apply: cd worker && npx wrangler d1 execute <D1_DATABASE_NAME> --remote --file=./migrations/0005_create_push_subscriptions.sql
 
 CREATE TABLE push_subscriptions (
   id TEXT PRIMARY KEY,

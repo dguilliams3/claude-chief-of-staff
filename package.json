@@ -9,7 +9,7 @@
     "agent"
   ],
   "scripts": {
-    "start": "concurrently -n api,tunnel -c blue,green \"npx tsx server/local/server.ts\" \"cloudflared tunnel run cos-tunnel\"",
+    "start": "concurrently -n api,tunnel -c blue,green \"npx tsx server/local/server.ts\" \"cloudflared tunnel run ${TUNNEL_NAME:-YOUR_TUNNEL_NAME}\"",
     "test": "npm run test --workspace=agent && npm run test --workspace=app",
     "typecheck": "tsc --noEmit -p agent/tsconfig.json && tsc --noEmit -p app/tsconfig.app.json && tsc --noEmit -p server/worker/tsconfig.json && tsc --noEmit -p server/local/tsconfig.json",
     "build": "npm run build --workspace=app"

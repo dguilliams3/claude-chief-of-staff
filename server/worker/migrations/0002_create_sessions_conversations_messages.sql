@@ -9,7 +9,7 @@
 --   messages      -- Individual chat messages (append-only, role CHECK constraint)
 --
 -- Backfill: Existing briefings -> sessions + conversations rows
--- Apply: wrangler d1 migrations apply cos-briefings
+-- Apply: wrangler d1 migrations apply <D1_DATABASE_NAME>
 --
 -- APPEND-ONLY: These tables never receive UPDATE or DELETE operations.
 --

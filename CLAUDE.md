@@ -61,7 +61,7 @@ cd app && npm run build
 cd server/worker && npx wrangler deploy
 
 # Deploy frontend
-cd app && npx wrangler pages deploy dist --project-name cos-dashboard --branch main
+cd app && npx wrangler pages deploy dist --project-name <PAGES_PROJECT_NAME> --branch main
 ```
 
 ---

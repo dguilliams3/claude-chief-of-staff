@@ -1,6 +1,6 @@
 name = "YOUR_WORKER_NAME"
 main = "src/index.ts"
-compatibility_date = "2025-01-01"
+compatibility_date = "2026-04-01"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
@@ -8,12 +8,13 @@ TUNNEL_URL = "YOUR_TUNNEL_URL"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "cos-briefings"
+database_name = "YOUR_D1_DATABASE_NAME"
 database_id = "YOUR_D1_DATABASE_ID"
 
-[[r2_buckets]]
-binding = "EXPORTS_BUCKET"
-bucket_name = "cos-exports"
+# Optional — enable if your Cloudflare account has R2 enabled.
+# [[r2_buckets]]
+# binding = "EXPORTS_BUCKET"
+# bucket_name = "YOUR_R2_BUCKET_NAME"
 
 # Custom domain: YOUR_CUSTOM_DOMAIN
 # Set up via Cloudflare dashboard: Workers & Pages → YOUR_WORKER_NAME → Custom Domains → Add

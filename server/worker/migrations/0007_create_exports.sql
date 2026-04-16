@@ -8,7 +8,7 @@
 -- Designed for multiple export types from day one (pdf, markdown, email).
 -- R2 artifacts are stored separately — this table is the index.
 --
--- Apply: cd worker && npx wrangler d1 execute cos-briefings --remote --file=./migrations/0007_create_exports.sql
+-- Apply: cd worker && npx wrangler d1 execute <D1_DATABASE_NAME> --remote --file=./migrations/0007_create_exports.sql
 
 CREATE TABLE exports (
   id TEXT PRIMARY KEY,

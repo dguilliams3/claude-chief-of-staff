@@ -43,7 +43,7 @@ The deployment target is Cloudflare: Workers (API), Pages (PWA), D1 (storage), c
 When both Worker and frontend change:
 
 1. Deploy Worker first (`cd server/worker && npx wrangler deploy`)
-2. Deploy frontend second (`cd app && npx wrangler pages deploy dist --project-name cos-dashboard --branch main`)
+2. Deploy frontend second (`cd app && npx wrangler pages deploy dist --project-name <PAGES_PROJECT_NAME> --branch main`)
 
 The frontend may reference new API routes or response shapes. Deploying it before the Worker creates a window where the PWA calls endpoints that don't exist yet.
 

@@ -55,9 +55,26 @@ Started: <timestamp>
    - Do you have a custom domain you want to use, or use free Cloudflare URLs?
    - If custom: what domain? Which subdomains for dashboard and tunnel?
 
-8. **Summary + confirm:** Present all answers in a table. Ask: "Does this look right? Any changes before we proceed?"
+8. **Resource naming** — ask (or propose sensible defaults based on their
+   instance name / username):
+   - `D1_DATABASE_NAME` (e.g. `my-briefings`, `jdoe-briefings`)
+   - `R2_BUCKET_NAME` (e.g. `my-exports`, `jdoe-exports`; can be skipped if
+     they opt out of exports)
+   - `WORKER_NAME` (e.g. `my-cos-worker`)
+   - `PAGES_PROJECT_NAME` (e.g. `my-dashboard`)
+   - `TUNNEL_NAME` (e.g. `my-tunnel`, must be unique within their Cloudflare account)
 
-9. Append all answers to `setup-run/setup-log.md` under Phase 0.
+   These feed into later phases — every wrangler / cloudflared command in
+   Phases 2+ uses the captured names. DO NOT copy the fork's template
+   defaults into commands verbatim; substitute the user's chosen names.
+
+9. **Summary + confirm:** Present all answers in a table (including the
+   resource names from step 8). Ask: "Does this look right? Any changes
+   before we proceed?"
+
+10. Append all answers to `setup-run/setup-log.md` under Phase 0 — include
+    an explicit `## Resource names` section with each captured value so
+    subsequent phases can read them reliably.
 
 ---
 
@@ -107,7 +124,7 @@ _Goal: Create D1 database, configure Worker, set secrets._
 
 3. Create D1 database:
    ```
-   wrangler d1 create cos-briefings
+   wrangler d1 create <D1_DATABASE_NAME>
    ```
    Capture the `database_id` from output.
 
@@ -116,7 +133,7 @@ _Goal: Create D1 database, configure Worker, set secrets._
 
 5. Apply D1 migrations:
    ```
-   cd server/worker && wrangler d1 migrations apply cos-briefings --remote
+   cd server/worker && wrangler d1 migrations apply <D1_DATABASE_NAME> --remote
    ```
 
 6. Generate a random auth token:
@@ -135,7 +152,7 @@ _Goal: Create D1 database, configure Worker, set secrets._
 
 ```markdown
 ## Phase 2: Cloudflare Infrastructure
-- D1 database: cos-briefings (id: <database_id>)
+- D1 database: <D1_DATABASE_NAME> (id: <database_id>)
 - Migrations applied: OK
 - COS_TOKEN generated: <first 8 chars>...
 - Worker secret set: OK
@@ -156,21 +173,21 @@ _Goal: Create a cloudflared tunnel so the local API is reachable from the Worker
 
 3. Create the tunnel:
    ```
-   cloudflared tunnel create cos-tunnel
+   cloudflared tunnel create <TUNNEL_NAME>
    ```
    Capture the tunnel UUID from output.
 
 4. **If custom domain** (from Phase 0):
    - Route DNS:
      ```
-     cloudflared tunnel route dns cos-tunnel <subdomain.domain.com>
+     cloudflared tunnel route dns <TUNNEL_NAME> <subdomain.domain.com>
      ```
    - Set `TUNNEL_URL` to `https://<subdomain.domain.com>`
 
 5. **If no custom domain:**
    - Route DNS via the user's Cloudflare-managed zone:
      ```
-     cloudflared tunnel route dns cos-tunnel <subdomain.domain.com>
+     cloudflared tunnel route dns <TUNNEL_NAME> <subdomain.domain.com>
      ```
    - Set `TUNNEL_URL` to `https://<subdomain.domain.com>`
    - Note: Quick Tunnels (`cloudflared tunnel --url`) generate ephemeral hostnames that change on restart. Always use a named tunnel for production.
@@ -287,7 +304,7 @@ _Goal: Write env config, deploy Worker and frontend._
 
 6. Deploy the frontend:
    ```
-   cd app && wrangler pages deploy dist --project-name cos-dashboard
+   cd app && wrangler pages deploy dist --project-name <PAGES_PROJECT_NAME>
    ```
    Capture the Pages URL from output.
 
@@ -316,7 +333,7 @@ _Goal: Verify the full stack works end-to-end._
 
 3. Start the local API server and tunnel:
    - Start local API: `npx tsx server/local/server.ts`
-   - Start tunnel: `cloudflared tunnel run cos-tunnel`
+   - Start tunnel: `cloudflared tunnel run <TUNNEL_NAME>`
    - (Guide user to run these in separate terminals, or use the start script if available.)
 
 4. Run a test briefing:
@@ -539,7 +556,7 @@ _Goal: Let the user choose palette, layout, and icons for their dashboard. Desig
 
 13. Redeploy:
     ```
-    cd app && wrangler pages deploy dist --project-name cos-dashboard
+    cd app && wrangler pages deploy dist --project-name <PAGES_PROJECT_NAME>
     ```
 
 14. Verify: `git status` should show NO unstaged changes from the customization. Only `local/` and `.env` should be modified (both gitignored).
@@ -570,7 +587,7 @@ _Goal: Summarize everything and leave the user with a clear picture of their sys
    {
      "timestamp": "<ISO timestamp>",
      "infrastructure": {
-       "d1_database": "cos-briefings",
+       "d1_database": "<D1_DATABASE_NAME>",
        "d1_database_id": "<id>",
        "worker_url": "<url>",
        "frontend_url": "<url>",

@@ -10,7 +10,7 @@
 --   conversations.session_id UNIQUE constraint preserved (SQLite allows multiple NULLs)
 --   briefing_id UNIQUE constraint removed (multiple conversations per briefing)
 --
--- Apply: wrangler d1 execute cos-briefings --remote --file=./migrations/0003_...sql
+-- Apply: wrangler d1 execute <D1_DATABASE_NAME> --remote --file=./migrations/0003_...sql
 --
 -- SQLite does not support ALTER COLUMN, so we rebuild the table.
 -- PRAGMA foreign_keys must be OFF during rebuild (messages references conversations).

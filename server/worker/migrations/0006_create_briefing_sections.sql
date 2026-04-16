@@ -11,7 +11,7 @@
 -- Each row = one section from one briefing. The section_key field
 -- (e.g., "DRIFT", "SPRINT_STATUS") enables grouping across briefings.
 --
--- Apply: cd worker && npx wrangler d1 execute cos-briefings --remote --file=./migrations/0006_create_briefing_sections.sql
+-- Apply: cd worker && npx wrangler d1 execute <D1_DATABASE_NAME> --remote --file=./migrations/0006_create_briefing_sections.sql
 
 CREATE TABLE briefing_sections (
   id TEXT PRIMARY KEY,

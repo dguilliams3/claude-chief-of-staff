@@ -10,7 +10,7 @@
 --   sessions.total_cost_usd: REAL DEFAULT 0 — cumulative cost across all CLI calls in this session
 --   sessions.last_used_at: TEXT — ISO timestamp of most recent CLI call
 --
--- Apply: cd worker && npx wrangler d1 execute cos-briefings --remote --file=./migrations/0004_add_session_token_metadata.sql
+-- Apply: cd worker && npx wrangler d1 execute <D1_DATABASE_NAME> --remote --file=./migrations/0004_add_session_token_metadata.sql
 
 ALTER TABLE sessions ADD COLUMN total_tokens INTEGER DEFAULT 0;
 ALTER TABLE sessions ADD COLUMN context_window INTEGER DEFAULT 0;
