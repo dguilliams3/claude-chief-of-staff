@@ -32,6 +32,10 @@ set -euo pipefail
 # depersonalization).
 WHITELIST=(
   "scripts/check-depersonalization.sh"
+  # Test for the guard itself — needs literal forms of the forbidden patterns
+  # to construct test fixtures and assert the guard catches them. The literals
+  # are split via `.join()` to keep the fully-qualified strings out of source.
+  "scripts/__tests__/check-depersonalization.test.ts"
 )
 
 # Regex union of forbidden patterns.

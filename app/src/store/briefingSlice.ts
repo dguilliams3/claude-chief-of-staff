@@ -27,6 +27,7 @@ import {
   fetchBriefingTypes,
 } from "@/domain/briefing";
 import { pollForResult, stopPolling, stopAllPolling } from "@/lib/polling";
+import { toast } from "@/lib/toast";
 
 /** Poll key prefix for trigger polling — combined with jobId for uniqueness. */
 const TRIGGER_POLL_KEY = "briefing-trigger";
@@ -218,6 +219,10 @@ export function createBriefingSlice(
         jobId = result.jobId;
       } catch (err) {
         console.error("Trigger failed:", err);
+        toast(
+          `Briefing trigger failed: ${err instanceof Error ? err.message : "unknown error"}`,
+          "error",
+        );
         return;
       }
 
@@ -238,6 +243,7 @@ export function createBriefingSlice(
           },
           onFailed(error) {
             console.error("Trigger job failed:", error);
+            toast(`Briefing generation failed: ${error}`, "error");
             set({ activeTrigger: null, sessionMode: { type: "new" } });
           },
           onTimeout() {

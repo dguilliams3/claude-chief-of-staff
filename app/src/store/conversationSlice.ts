@@ -15,10 +15,10 @@
  * See also: `app/src/domain/conversation/types.ts` -- type contracts
  * Do NOT: Call fetch directly -- use api.ts functions
  */
-import type { Message, ConversationListItem } from '@/domain/conversation';
-import type { FollowUpJobStatus } from '@/domain/conversation';
-import { FollowUpError } from '@/domain/conversation/errors';
-import { assignConversationName } from '@/domain/conversation/conversation-name';
+import type { Message, ConversationListItem } from "@/domain/conversation";
+import type { FollowUpJobStatus } from "@/domain/conversation";
+import { FollowUpError } from "@/domain/conversation/errors";
+import { assignConversationName } from "@/domain/conversation/conversation-name";
 import {
   sendFollowUp as apiSendFollowUp,
   fetchFollowUpStatus as apiFetchFollowUpStatus,
@@ -27,15 +27,19 @@ import {
   createConversation as apiCreateConversation,
   EMPTY_HISTORY,
   mergeMessages,
-} from '@/domain/conversation';
-import { pollForResult, stopPolling, stopAllPolling as stopAllActivePolls } from '@/lib/polling';
+} from "@/domain/conversation";
+import {
+  pollForResult,
+  stopPolling,
+  stopAllPolling as stopAllActivePolls,
+} from "@/lib/polling";
+import { toast } from "@/lib/toast";
 
 /** Tracks which briefingId is currently being hydrated. Used to discard stale async responses
  * when the user switches briefings during hydration. Module-level (not store state) to avoid render cycles. */
 let currentHydratingBriefingId: string | null = null;
 
 // EMPTY_HISTORY lives in @/domain/conversation/constants — import directly from there
-
 
 /**
  * Pending follow-up state — carries briefingId for matching and startedAt
@@ -70,14 +74,22 @@ export interface ConversationSlice {
   prefillQuestion: string | null;
 
   // Actions
-  sendFollowUp: (options: { briefingId?: string; sessionId?: string; question: string; conversationId?: string }) => Promise<void>;
+  sendFollowUp: (options: {
+    briefingId?: string;
+    sessionId?: string;
+    question: string;
+    conversationId?: string;
+  }) => Promise<void>;
   hydrateFollowUpHistory: (options: { briefingId: string }) => Promise<void>;
   createConversation: (briefingId?: string) => Promise<ConversationListItem>;
   setActiveConversation: (conversationId: string) => Promise<void>;
   fetchBriefingConversations: (briefingId: string) => Promise<void>;
   setPrefillQuestion: (question: string | null) => void;
   /** Updates a conversation name in briefingConversations (syncs rename from ChatsSlice). */
-  updateBriefingConversationName: (options: { conversationId: string; name: string }) => void;
+  updateBriefingConversationName: (options: {
+    conversationId: string;
+    name: string;
+  }) => void;
 }
 
 // mergeMessages imported from @/domain/conversation
@@ -128,7 +140,6 @@ function clearPending(
   return { pendingFollowUps: rest };
 }
 
-
 /**
  * Delivers a completed follow-up response into the store — appends the assistant
  * message to history, assigns the conversation name if Claude provided one, and
@@ -173,11 +184,21 @@ function deliverFollowUpResponse(
 
   // Assign conversation name if Claude provided one
   if (job.chatName && conversationId) {
-    set({ briefingConversations: assignConversationName(get().briefingConversations, conversationId, job.chatName) });
+    set({
+      briefingConversations: assignConversationName(
+        get().briefingConversations,
+        conversationId,
+        job.chatName,
+      ),
+    });
   }
 
   // Sync to ConversationDetail (selectedConversationMessages)
-  syncSelectedMessages(withAssistant, { briefingId, conversationId }, { get, set });
+  syncSelectedMessages(
+    withAssistant,
+    { briefingId, conversationId },
+    { get, set },
+  );
 }
 
 /**
@@ -201,24 +222,35 @@ function handleFollowUpError(
   },
   store: { get: StoreGet; set: StoreSet },
 ): void {
-  const { historyKey, tempId, effectiveSessionId, briefingId, conversationId } = context;
+  const { historyKey, tempId, effectiveSessionId, briefingId, conversationId } =
+    context;
   const { get, set } = store;
 
   if (error instanceof FollowUpError) {
     set({ followUpError: error.message });
+    toast(error.message, "error");
 
     const current = get().followUpHistory[historyKey] ?? [];
     if (error.persisted && error.userMessage) {
-      const updated = current.map(m =>
+      const updated = current.map((m) =>
         m.id === tempId
-          ? { ...m, id: error.userMessage!.id, conversationId: error.userMessage!.conversationId, createdAt: error.userMessage!.createdAt }
-          : m
+          ? {
+              ...m,
+              id: error.userMessage!.id,
+              conversationId: error.userMessage!.conversationId,
+              createdAt: error.userMessage!.createdAt,
+            }
+          : m,
       );
-      set({ followUpHistory: { ...get().followUpHistory, [historyKey]: updated } });
+      set({
+        followUpHistory: { ...get().followUpHistory, [historyKey]: updated },
+      });
       syncSelectedMessages(updated, { briefingId, conversationId }, store);
     } else if (!error.persisted) {
-      const updated = current.filter(m => m.id !== tempId);
-      set({ followUpHistory: { ...get().followUpHistory, [historyKey]: updated } });
+      const updated = current.filter((m) => m.id !== tempId);
+      set({
+        followUpHistory: { ...get().followUpHistory, [historyKey]: updated },
+      });
       syncSelectedMessages(updated, { briefingId, conversationId }, store);
     }
 
@@ -227,17 +259,22 @@ function handleFollowUpError(
       // StoreGet/StoreSet via ChatsSliceDeps — no cast needed.
       // Try sessionId first, fall back to historyKey (conversationId) for Chats-tab conversations
       // where effectiveSessionId may be undefined.
-      const conversation = get().conversations.find(c =>
-        (effectiveSessionId && c.sessionId === effectiveSessionId) || c.id === historyKey
+      const conversation = get().conversations.find(
+        (c) =>
+          (effectiveSessionId && c.sessionId === effectiveSessionId) ||
+          c.id === historyKey,
       );
       if (conversation) {
         set({
-          conversationErrors: { ...get().conversationErrors, [conversation.id]: 'Session expired -- read-only' },
+          conversationErrors: {
+            ...get().conversationErrors,
+            [conversation.id]: "Session expired -- read-only",
+          },
         });
       }
     }
   } else {
-    set({ followUpError: 'Something went wrong. Try again.' });
+    set({ followUpError: "Something went wrong. Try again." });
   }
   // Clear this conversation's pending entry (keyed by historyKey)
   set(clearPending(get, historyKey));
@@ -246,8 +283,13 @@ function handleFollowUpError(
 /** Initial conversation data state — used by createConversationSlice and logout reset. */
 export const CONVERSATION_INITIAL_STATE: Pick<
   ConversationSlice,
-  'followUpHistory' | 'pendingFollowUps' | 'followUpError' | 'followUpHydrating' |
-  'activeConversationId' | 'briefingConversations' | 'prefillQuestion'
+  | "followUpHistory"
+  | "pendingFollowUps"
+  | "followUpError"
+  | "followUpHydrating"
+  | "activeConversationId"
+  | "briefingConversations"
+  | "prefillQuestion"
 > = {
   followUpHistory: {},
   pendingFollowUps: {},
@@ -270,7 +312,10 @@ export const CONVERSATION_INITIAL_STATE: Pick<
  * Pattern: STORE-FIRST — actions write to store, components read via selectors
  * Tested by: `app/src/store/conversationSlice.test.ts`
  */
-export function createConversationSlice(set: StoreSet, get: StoreGet): ConversationSlice {
+export function createConversationSlice(
+  set: StoreSet,
+  get: StoreGet,
+): ConversationSlice {
   return {
     ...CONVERSATION_INITIAL_STATE,
 
@@ -294,7 +339,12 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
      * Do NOT: Call apiUpdateConversationName — Worker persists chatName on completion (M4)
      * Tested by: `app/src/store/conversationSlice.test.ts`
      */
-    async sendFollowUp({ briefingId, sessionId, question, conversationId }: {
+    async sendFollowUp({
+      briefingId,
+      sessionId,
+      question,
+      conversationId,
+    }: {
       briefingId?: string;
       sessionId?: string;
       question: string;
@@ -305,7 +355,9 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
       // The Worker's resolveFollowUpContext always does the authoritative D1 lookup.
       let effectiveSessionId = sessionId;
       if (conversationId) {
-        const conv = get().briefingConversations.find(c => c.id === conversationId);
+        const conv = get().briefingConversations.find(
+          (c) => c.id === conversationId,
+        );
         if (conv?.sessionId) effectiveSessionId = conv.sessionId;
         // If not found locally, effectiveSessionId stays as the passed-in sessionId
         // (which may be undefined). The Worker resolves it from D1 via conversationId.
@@ -315,11 +367,14 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
       // Falls back to briefingId only for legacy single-chat flows without a conversationId.
       // Do NOT: Key by briefingId when conversationId exists — that collapses
       // all conversations under one briefing into a shared message array (Codex CRITICAL).
-      const historyKey = conversationId || briefingId || '';
+      const historyKey = conversationId || briefingId || "";
 
       // Guard: both IDs missing means we can't key the history or poll correctly.
       if (!historyKey) {
-        set({ followUpError: 'Cannot send follow-up: missing conversationId or briefingId' });
+        set({
+          followUpError:
+            "Cannot send follow-up: missing conversationId or briefingId",
+        });
         return;
       }
 
@@ -333,16 +388,22 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
       const tempId = `temp-${Date.now()}`;
       const optimisticMessage: Message = {
         id: tempId,
-        conversationId: conversationId ?? '',
-        role: 'user',
+        conversationId: conversationId ?? "",
+        role: "user",
         content: question,
         createdAt: new Date().toISOString(),
       };
       const history = get().followUpHistory[historyKey] ?? [];
       const startedAt = Date.now();
       set({
-        followUpHistory: { ...get().followUpHistory, [historyKey]: [...history, optimisticMessage] },
-        pendingFollowUps: { ...get().pendingFollowUps, [historyKey]: { historyKey, startedAt } },
+        followUpHistory: {
+          ...get().followUpHistory,
+          [historyKey]: [...history, optimisticMessage],
+        },
+        pendingFollowUps: {
+          ...get().pendingFollowUps,
+          [historyKey]: { historyKey, startedAt },
+        },
         followUpError: null,
       });
 
@@ -358,20 +419,39 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
 
       try {
         // 2. Send follow-up — returns instantly with jobId (202)
-        const res = await apiSendFollowUp({ briefingId, sessionId: effectiveSessionId ?? undefined, question, conversationId });
+        const res = await apiSendFollowUp({
+          briefingId,
+          sessionId: effectiveSessionId ?? undefined,
+          question,
+          conversationId,
+        });
 
         // 3. Reconcile user message: swap temp ID with D1 ID
         const current = get().followUpHistory[historyKey] ?? [];
         let updated = current;
 
         if (res.userMessage) {
-          updated = updated.map(m =>
+          updated = updated.map((m) =>
             m.id === tempId
-              ? { ...m, id: res.userMessage!.id, conversationId: res.userMessage!.conversationId, createdAt: res.userMessage!.createdAt }
-              : m
+              ? {
+                  ...m,
+                  id: res.userMessage!.id,
+                  conversationId: res.userMessage!.conversationId,
+                  createdAt: res.userMessage!.createdAt,
+                }
+              : m,
           );
-          set({ followUpHistory: { ...get().followUpHistory, [historyKey]: updated } });
-          syncSelectedMessages(updated, { briefingId, conversationId }, { get, set });
+          set({
+            followUpHistory: {
+              ...get().followUpHistory,
+              [historyKey]: updated,
+            },
+          });
+          syncSelectedMessages(
+            updated,
+            { briefingId, conversationId },
+            { get, set },
+          );
         }
 
         // 4. Start adaptive polling for the response
@@ -379,7 +459,11 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
           { pollKey: historyKey, startedAt },
           {
             onComplete(job) {
-              deliverFollowUpResponse(job, { historyKey, conversationId, briefingId }, { get, set });
+              deliverFollowUpResponse(
+                job,
+                { historyKey, conversationId, briefingId },
+                { get, set },
+              );
             },
             onFailed(error) {
               set({ followUpError: error, ...clearPending(get, historyKey) });
@@ -388,29 +472,44 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
               // Try recovering from D1 — the push-on-completion may have persisted
               // the assistant message even though our direct poll timed out.
               if (conversationId) {
-                apiFetchMessages({ conversationId }).then(msgs => {
-                  if (msgs.length > 0 && msgs[msgs.length - 1].role === 'assistant') {
-                    // Recovery success: D1 has the assistant message
+                apiFetchMessages({ conversationId })
+                  .then((msgs) => {
+                    if (
+                      msgs.length > 0 &&
+                      msgs[msgs.length - 1].role === "assistant"
+                    ) {
+                      // Recovery success: D1 has the assistant message
+                      set({
+                        followUpHistory: {
+                          ...get().followUpHistory,
+                          [historyKey]: msgs,
+                        },
+                        ...clearPending(get, historyKey),
+                      });
+                      syncSelectedMessages(
+                        msgs,
+                        { briefingId, conversationId },
+                        { get, set },
+                      );
+                    } else {
+                      set({
+                        followUpError:
+                          "Response timed out. Claude may still be working — check back later.",
+                        ...clearPending(get, historyKey),
+                      });
+                    }
+                  })
+                  .catch(() => {
                     set({
-                      followUpHistory: { ...get().followUpHistory, [historyKey]: msgs },
+                      followUpError:
+                        "Response timed out. Claude may still be working — check back later.",
                       ...clearPending(get, historyKey),
                     });
-                    syncSelectedMessages(msgs, { briefingId, conversationId }, { get, set });
-                  } else {
-                    set({
-                      followUpError: 'Response timed out. Claude may still be working — check back later.',
-                      ...clearPending(get, historyKey),
-                    });
-                  }
-                }).catch(() => {
-                  set({
-                    followUpError: 'Response timed out. Claude may still be working — check back later.',
-                    ...clearPending(get, historyKey),
                   });
-                });
               } else {
                 set({
-                  followUpError: 'Response timed out. Claude may still be working — check back later.',
+                  followUpError:
+                    "Response timed out. Claude may still be working — check back later.",
                   ...clearPending(get, historyKey),
                 });
               }
@@ -422,19 +521,25 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
           // fetchStatus: the HTTP call that polls for the job result.
           // The signal comes from the polling lifecycle AbortController — forwarded
           // to fetch() so the request is cancelled when stopPolling() is called.
-          (signal) => apiFetchFollowUpStatus({
-            jobId: res.jobId,
-            conversationId: res.conversationId,
-            briefingId: res.briefingId,
-            isNewSession: res.isNewSession,
-            signal,
-          }),
+          (signal) =>
+            apiFetchFollowUpStatus({
+              jobId: res.jobId,
+              conversationId: res.conversationId,
+              briefingId: res.briefingId,
+              isNewSession: res.isNewSession,
+              signal,
+            }),
         );
-
       } catch (error) {
         handleFollowUpError(
           error,
-          { historyKey, tempId, effectiveSessionId, briefingId, conversationId },
+          {
+            historyKey,
+            tempId,
+            effectiveSessionId,
+            briefingId,
+            conversationId,
+          },
           { get, set },
         );
       }
@@ -449,36 +554,60 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
       // This uses a module-level variable (not store state) to avoid render cycles.
       currentHydratingBriefingId = briefingId;
 
-      set({ followUpHydrating: { ...get().followUpHydrating, [briefingId]: true } });
+      set({
+        followUpHydrating: { ...get().followUpHydrating, [briefingId]: true },
+      });
 
       try {
-        const conversationListItems = await apiFetchConversationByBriefing({ briefingId });
+        const conversationListItems = await apiFetchConversationByBriefing({
+          briefingId,
+        });
 
         // Stale check: user may have switched briefings during the async fetch
         if (currentHydratingBriefingId !== briefingId) {
-          set({ followUpHydrating: { ...get().followUpHydrating, [briefingId]: false } });
+          set({
+            followUpHydrating: {
+              ...get().followUpHydrating,
+              [briefingId]: false,
+            },
+          });
           return;
         }
 
         // Atomic swap — replace previous briefing's conversations in one set() call
         set({
           briefingConversations: conversationListItems,
-          activeConversationId: conversationListItems.length > 0 ? conversationListItems[0].id : null,
+          activeConversationId:
+            conversationListItems.length > 0
+              ? conversationListItems[0].id
+              : null,
         });
 
         if (conversationListItems.length === 0) {
-          set({ followUpHydrating: { ...get().followUpHydrating, [briefingId]: false } });
+          set({
+            followUpHydrating: {
+              ...get().followUpHydrating,
+              [briefingId]: false,
+            },
+          });
           return;
         }
 
         // Load messages for the active conversation
         const activeConversation = conversationListItems[0];
         const conversationHistoryKey = activeConversation.id;
-        const messages = await apiFetchMessages({ conversationId: activeConversation.id });
+        const messages = await apiFetchMessages({
+          conversationId: activeConversation.id,
+        });
 
         // Stale check again after second async operation
         if (currentHydratingBriefingId !== briefingId) {
-          set({ followUpHydrating: { ...get().followUpHydrating, [briefingId]: false } });
+          set({
+            followUpHydrating: {
+              ...get().followUpHydrating,
+              [briefingId]: false,
+            },
+          });
           return;
         }
 
@@ -486,18 +615,36 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
         const merged = mergeMessages(messages, existing);
 
         set({
-          followUpHistory: { ...get().followUpHistory, [conversationHistoryKey]: merged.length > 0 ? merged : EMPTY_HISTORY },
-          followUpHydrating: { ...get().followUpHydrating, [briefingId]: false },
+          followUpHistory: {
+            ...get().followUpHistory,
+            [conversationHistoryKey]:
+              merged.length > 0 ? merged : EMPTY_HISTORY,
+          },
+          followUpHydrating: {
+            ...get().followUpHydrating,
+            [briefingId]: false,
+          },
         });
         currentHydratingBriefingId = null;
       } catch (error) {
-        console.error('[COS] Follow-up hydration failed for briefing', briefingId, error);
-        set({ followUpHydrating: { ...get().followUpHydrating, [briefingId]: false } });
+        console.error(
+          "[COS] Follow-up hydration failed for briefing",
+          briefingId,
+          error,
+        );
+        set({
+          followUpHydrating: {
+            ...get().followUpHydrating,
+            [briefingId]: false,
+          },
+        });
         currentHydratingBriefingId = null;
       }
     },
 
-    async createConversation(briefingId?: string): Promise<ConversationListItem> {
+    async createConversation(
+      briefingId?: string,
+    ): Promise<ConversationListItem> {
       const item = await apiCreateConversation({ briefingId });
       set({
         briefingConversations: [...get().briefingConversations, item],
@@ -521,19 +668,29 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
           },
         });
       } catch (err) {
-        console.error('[COS] Failed to load messages for conversation', conversationId, err);
+        console.error(
+          "[COS] Failed to load messages for conversation",
+          conversationId,
+          err,
+        );
       }
     },
 
     async fetchBriefingConversations(briefingId: string) {
       try {
-        const convListItems = await apiFetchConversationByBriefing({ briefingId });
+        const convListItems = await apiFetchConversationByBriefing({
+          briefingId,
+        });
         set({ briefingConversations: convListItems });
         if (convListItems.length > 0 && !get().activeConversationId) {
           set({ activeConversationId: convListItems[0].id });
         }
       } catch (err) {
-        console.error('[COS] Failed to fetch briefing conversations', briefingId, err);
+        console.error(
+          "[COS] Failed to fetch briefing conversations",
+          briefingId,
+          err,
+        );
       }
     },
 
@@ -552,13 +709,21 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
       set({ prefillQuestion: question });
     },
 
-    updateBriefingConversationName({ conversationId, name }: { conversationId: string; name: string }) {
+    updateBriefingConversationName({
+      conversationId,
+      name,
+    }: {
+      conversationId: string;
+      name: string;
+    }) {
       set({
-        briefingConversations: get().briefingConversations.map(conversation =>
-          conversation.id === conversationId ? { ...conversation, name } : conversation
+        briefingConversations: get().briefingConversations.map(
+          (conversation) =>
+            conversation.id === conversationId
+              ? { ...conversation, name }
+              : conversation,
         ),
       });
     },
-
   };
 }
