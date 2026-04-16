@@ -6,6 +6,19 @@ Personal AI briefing system — operational briefings + field intelligence, powe
 
 A headless agent runner generates structured morning briefings (work synthesis from Jira, Fireflies, MS365) and field intelligence (LLM/agent landscape monitoring). Briefings are stored in Cloudflare D1 and served through a mobile-first PWA.
 
+## Distribution Model
+
+Each operator runs their own instance end-to-end:
+
+- Cloudflare account (Workers + D1 + Pages + optional R2) — free tier is sufficient
+- Own domain (or a Cloudflare-provided `*.workers.dev` subdomain)
+- Own bearer token (`COS_TOKEN`) protecting the Worker API
+- Own MCP servers configured for Jira, Fireflies, MS365, etc.
+
+No shared backend, no multi-tenant account system. Your briefings, your data, your Cloudflare bill (probably $0). Personal config (persona, focus areas, theme, feed sources) lives in the gitignored `local/` directory — your working tree stays portable.
+
+The `/setup-instance` skill walks you through the full provisioning, or you can configure manually.
+
 ## Quick Start
 
 1. **Clone and install:**
@@ -123,8 +136,27 @@ Each instance has its own bearer token (`COS_TOKEN`) protecting its Worker API. 
 3. Update your local env: set `COS_TOKEN=<new-token>` in `.env`
 4. Re-enter the new token on your dashboard login screen
 
+## Development Workflow
+
+This repo ships opinionated tooling so forks stay maintainable:
+
+| Tool | Purpose |
+|------|---------|
+| `scripts/preflight.sh` (`npm run preflight`) | Validates local setup before a run: env vars, wrangler placeholders, D1 bindings, tunnel config |
+| `scripts/check-depersonalization.sh` | Refuses commits containing operator-specific identifiers (configurable regex). Enforced via `scripts/git-hooks/pre-commit` — enable with `git config core.hooksPath scripts/git-hooks` |
+| `.claude/hooks/block-destructive-git.py` | Refuses `git reset --hard` / `git push --force` from Claude Code sessions |
+| `.claude/hooks/spec-quality-gate.py` | Flags SPEC files missing required sections (numbered steps, GATEs, Agent Roster) |
+| `.github/workflows/ci.yml` | Runs lint + typecheck + tests across all workspaces on every push/PR |
+| `.github/dependabot.yml` | Weekly npm dep updates, workspaces-aware |
+
 ## Documentation
 
 - **`CLAUDE.md`** — Full project reference: architecture, conventions, quick reference
 - **`local/README.md`** — Override file formats and examples
 - **`skills/setup-instance/SKILL.md`** — What the setup wizard does (9 phases)
+- **`docs/MCP_SUBAGENT_STRATEGY.md`** — How the agent uses Sonnet subagents for MCP tool calls (context isolation pattern)
+- **`docs/COUNCIL_GUIDE.md`** — Multi-model planning sessions (Claude + Codex + Gemini)
+- **`docs/COMPONENT_CONVENTION.md`** — Three-tier component architecture (views / components / ui)
+- **`docs/DOCSTRING_GUIDE.md`** — Cross-reference tag conventions (`Upstream:`, `Downstream:`, `Tested by:`)
+- **`docs/VISUAL_DIRECTION.md`** — Design guidelines for the PWA
+- **`docs/PWA_AND_BRIEFING_DESIGN.md`** — How briefings map to PWA views
