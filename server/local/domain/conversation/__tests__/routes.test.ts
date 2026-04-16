@@ -9,10 +9,13 @@ const REPO_ROOT = resolve(TEST_DIR, '../../../../../');
 const OVERRIDE_PATH = resolve(REPO_ROOT, 'local/chat-system-prompt.md');
 const DEFAULT_PATH = resolve(REPO_ROOT, 'agent/prompts/chat-system-prompt.md');
 
-const { buildClaudeArgsMock, callClaudeMock } = vi.hoisted(() => {
+const { buildClaudeArgsMock, callClaudeMock, enqueueFollowUpMock } = vi.hoisted(() => {
   return {
     buildClaudeArgsMock: vi.fn((options: { system: string }) => ['--mock-arg', options.system]),
     callClaudeMock: vi.fn(async () => JSON.stringify({ result: 'ok', session_id: 'sid-1' })),
+    enqueueFollowUpMock: vi.fn<(lockKey: string, sessionId: string) => { id: string; sessionId: string } | null>(
+      (lockKey: string, sessionId: string) => ({ id: `${lockKey}-job`, sessionId }),
+    ),
   };
 });
 
@@ -37,7 +40,7 @@ vi.mock('../../../../../agent/logger', () => ({
 }));
 
 vi.mock('../followUpQueue', () => ({
-  enqueueFollowUp: vi.fn((lockKey: string, sessionId: string) => ({ id: `${lockKey}-job`, sessionId })),
+  enqueueFollowUp: enqueueFollowUpMock,
   completeFollowUp: vi.fn(),
   failFollowUp: vi.fn(),
   getFollowUpJob: vi.fn(() => null),
@@ -55,6 +58,8 @@ afterEach(() => {
   rmSync(OVERRIDE_PATH, { force: true });
   buildClaudeArgsMock.mockClear();
   callClaudeMock.mockClear();
+  enqueueFollowUpMock.mockReset();
+  enqueueFollowUpMock.mockImplementation((lockKey: string, sessionId: string) => ({ id: `${lockKey}-job`, sessionId }));
 });
 
 async function invokeFollowUpRoute(): Promise<string> {
@@ -104,5 +109,48 @@ describe('getChatSystemPrompt live getter behavior', () => {
 
     expect(first).toBe('first override');
     expect(second).toBe('second override');
+  });
+});
+
+describe('follow-up lock key behavior', () => {
+  it('uses deterministic conversation lock and returns CONVERSATION_BUSY for second request', async () => {
+    enqueueFollowUpMock
+      .mockImplementationOnce((lockKey: string, sessionId: string) => ({ id: `${lockKey}-job-1`, sessionId }))
+      .mockReturnValueOnce(null);
+
+    const { createClaudeRoutes } = await import('../routes');
+    const app = createClaudeRoutes();
+    const body = {
+      question: 'follow-up question',
+      newSession: true,
+      conversationId: 'conv-123',
+    };
+
+    const firstResponse = await app.request('/follow-up', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const secondResponse = await app.request('/follow-up', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    expect(firstResponse.status).toBe(202);
+    expect(secondResponse.status).toBe(409);
+    await expect(secondResponse.json()).resolves.toMatchObject({ code: 'CONVERSATION_BUSY' });
+    expect(enqueueFollowUpMock).toHaveBeenNthCalledWith(
+      1,
+      'conv-123',
+      '',
+      expect.objectContaining({ conversationId: 'conv-123', isNewSession: true }),
+    );
+    expect(enqueueFollowUpMock).toHaveBeenNthCalledWith(
+      2,
+      'conv-123',
+      '',
+      expect.objectContaining({ conversationId: 'conv-123', isNewSession: true }),
+    );
   });
 });
