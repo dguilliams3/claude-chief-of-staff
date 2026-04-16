@@ -13,18 +13,23 @@
  * Do NOT: Call fetch directly -- use api.ts functions
  * Do NOT: Use setInterval -- use pollForResult from @/lib/polling
  */
-import type { Briefing, BriefingListItem } from '@/domain/briefing';
+import type {
+  Briefing,
+  BriefingListItem,
+  BriefingTypeInfo,
+} from "@/domain/briefing";
 import {
   fetchBriefings,
   triggerBriefing as apiTrigger,
   fetchTriggerStatus,
   fetchBriefingList,
   fetchBriefingById,
-} from '@/domain/briefing';
-import { pollForResult, stopPolling, stopAllPolling } from '@/lib/polling';
+  fetchBriefingTypes,
+} from "@/domain/briefing";
+import { pollForResult, stopPolling, stopAllPolling } from "@/lib/polling";
 
 /** Poll key prefix for trigger polling — combined with jobId for uniqueness. */
-const TRIGGER_POLL_KEY = 'briefing-trigger';
+const TRIGGER_POLL_KEY = "briefing-trigger";
 
 interface ActiveTrigger {
   type: string;
@@ -42,14 +47,24 @@ interface ActiveTrigger {
  * Coupling: `agent/run-briefing.ts` — interprets the sessionId forwarded by the Worker
  * See also: `worker/src/domain/session/routes.ts` — session list used to populate the dropdown
  */
-export type SessionMode = { type: 'new' } | { type: 'resume'; sessionId: string };
+export type SessionMode =
+  | { type: "new" }
+  | { type: "resume"; sessionId: string };
 
 export interface BriefingSlice {
   briefings: Record<string, Briefing>;
   loading: boolean;
   activeType: string;
   activeTrigger: ActiveTrigger | null;
+  /**
+   * Keys of briefing types this instance supports. Derived at runtime from
+   * `GET /briefings/types` which reads `shared/briefing-types.json` merged
+   * with optional `local/briefing-types.json`. Seeded with ['work', 'news']
+   * as a fallback if the API fails; hydrated after auth.
+   */
   availableTypes: readonly string[];
+  /** Full briefing-type metadata (key, label, description) keyed by type. */
+  typeMetadata: Record<string, BriefingTypeInfo>;
   sessionMode: SessionMode;
 
   // History / detail
@@ -63,6 +78,7 @@ export interface BriefingSlice {
   setSessionMode: (mode: SessionMode) => void;
   refresh: () => Promise<void>;
   silentRefresh: () => Promise<void>;
+  refreshBriefingTypes: () => Promise<void>;
   triggerBriefing: () => Promise<void>;
   cancelTrigger: () => void;
   fetchHistory: () => Promise<void>;
@@ -95,19 +111,31 @@ type StoreSet = (partial: Partial<BriefingSlice>) => void;
 /** Initial briefing data state — used by createBriefingSlice and logout reset. */
 export const BRIEFING_INITIAL_STATE: Pick<
   BriefingSlice,
-  'briefings' | 'loading' | 'activeType' | 'activeTrigger' | 'availableTypes' |
-  'historyList' | 'historyLoading' | 'selectedBriefingId' | 'selectedBriefing' | 'sessionMode'
+  | "briefings"
+  | "loading"
+  | "activeType"
+  | "activeTrigger"
+  | "availableTypes"
+  | "typeMetadata"
+  | "historyList"
+  | "historyLoading"
+  | "selectedBriefingId"
+  | "selectedBriefing"
+  | "sessionMode"
 > = {
   briefings: {},
   loading: true,
-  activeType: 'work',
+  activeType: "work",
   activeTrigger: null,
-  availableTypes: ['work', 'news'],
+  // Seed: derived types will hydrate from /briefings/types after auth.
+  // Work + News are the guaranteed defaults (defined in shared/briefing-types.json).
+  availableTypes: ["work", "news"],
+  typeMetadata: {},
   historyList: [],
   historyLoading: false,
   selectedBriefingId: null,
   selectedBriefing: null,
-  sessionMode: { type: 'new' },
+  sessionMode: { type: "new" },
 };
 
 /**
@@ -123,7 +151,10 @@ export const BRIEFING_INITIAL_STATE: Pick<
  * Pattern: STORE-FIRST — actions write to store, components read via selectors
  * Tested by: `app/src/store/briefingSlice.test.ts`
  */
-export function createBriefingSlice(set: StoreSet, get: StoreGet): BriefingSlice {
+export function createBriefingSlice(
+  set: StoreSet,
+  get: StoreGet,
+): BriefingSlice {
   return {
     ...BRIEFING_INITIAL_STATE,
 
@@ -153,24 +184,47 @@ export function createBriefingSlice(set: StoreSet, get: StoreGet): BriefingSlice
       await fetchAndSet(set);
     },
 
+    /**
+     * Fetches the registered briefing types from the Worker and populates
+     * `availableTypes` + `typeMetadata`. Should be called after auth hydration.
+     * Silent on failure — state stays on the seeded ['work', 'news'] default.
+     *
+     * Downstream: `app/src/domain/briefing/api.ts::fetchBriefingTypes`
+     */
+    async refreshBriefingTypes() {
+      try {
+        const types = await fetchBriefingTypes();
+        const metadata: Record<string, BriefingTypeInfo> = {};
+        for (const t of types) metadata[t.key] = t;
+        set({
+          availableTypes: types.map((t) => t.key),
+          typeMetadata: metadata,
+        });
+      } catch {
+        // Leave seeded defaults in place on failure
+      }
+    },
+
     async triggerBriefing() {
       if (get().activeTrigger) return;
 
       const triggerType = get().activeType;
       const mode = get().sessionMode;
-      const sessionId = mode.type === 'resume' ? mode.sessionId : undefined;
+      const sessionId = mode.type === "resume" ? mode.sessionId : undefined;
 
       let jobId: string;
       try {
         const result = await apiTrigger({ type: triggerType, sessionId });
         jobId = result.jobId;
       } catch (err) {
-        console.error('Trigger failed:', err);
+        console.error("Trigger failed:", err);
         return;
       }
 
       const startedAt = Date.now();
-      set({ activeTrigger: { type: triggerType, triggerStart: startedAt, jobId } });
+      set({
+        activeTrigger: { type: triggerType, triggerStart: startedAt, jobId },
+      });
 
       // Stop any existing trigger poll before starting a new one
       stopPolling(TRIGGER_POLL_KEY);
@@ -180,17 +234,17 @@ export function createBriefingSlice(set: StoreSet, get: StoreGet): BriefingSlice
         {
           async onComplete() {
             await get().silentRefresh();
-            set({ activeTrigger: null, sessionMode: { type: 'new' } });
+            set({ activeTrigger: null, sessionMode: { type: "new" } });
           },
           onFailed(error) {
-            console.error('Trigger job failed:', error);
-            set({ activeTrigger: null, sessionMode: { type: 'new' } });
+            console.error("Trigger job failed:", error);
+            set({ activeTrigger: null, sessionMode: { type: "new" } });
           },
           onTimeout() {
-            set({ activeTrigger: null, sessionMode: { type: 'new' } });
+            set({ activeTrigger: null, sessionMode: { type: "new" } });
           },
           onTerminalError() {
-            set({ activeTrigger: null, sessionMode: { type: 'new' } });
+            set({ activeTrigger: null, sessionMode: { type: "new" } });
           },
         },
         async (signal) => {
@@ -201,14 +255,14 @@ export function createBriefingSlice(set: StoreSet, get: StoreGet): BriefingSlice
           } catch (err) {
             // Re-throw 404 so pollForResult's terminal error detection kicks in
             // (job expired or server restarted — no point polling further)
-            if (err instanceof Error && err.message.includes('404')) throw err;
+            if (err instanceof Error && err.message.includes("404")) throw err;
 
             // Status endpoint unreachable — fall through to silentRefresh as fallback
             if (!signal.aborted) {
               await get().silentRefresh();
             }
             // Return 'running' so pollForResult schedules the next poll
-            return { status: 'running' as const };
+            return { status: "running" as const };
           }
         },
       );

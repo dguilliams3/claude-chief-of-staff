@@ -89,6 +89,9 @@ let prevAuthenticated = false;
 useStore.subscribe((state) => {
   if (state.authenticated && !prevAuthenticated) {
     state.silentRefresh();
+    // Hydrate briefing-type registry so the UI derives available tabs
+    // from the server, not from hardcoded work/news assumptions.
+    state.refreshBriefingTypes();
     // Subscribe to push notifications after auth (non-blocking, non-fatal)
     subscribeToPush().catch(() => {
       /* permission denied or not supported */

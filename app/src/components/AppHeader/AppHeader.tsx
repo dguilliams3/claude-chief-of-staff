@@ -1,14 +1,26 @@
-import { RefreshCw, ChevronDown, Download } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
-import { useStore } from '@/store';
-import { useRelativeTime } from '@/hooks/useRelativeTime';
-import { SessionDropdown } from './SessionDropdown';
-import { generateAndDownloadPdf } from '@/lib/export';
+import { RefreshCw, ChevronDown, Download } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { useStore } from "@/store";
+import { useRelativeTime } from "@/hooks/useRelativeTime";
+import { SessionDropdown } from "./SessionDropdown";
+import { generateAndDownloadPdf } from "@/lib/export";
 
-const TYPE_LABELS: Record<string, string> = {
-  work: 'Work',
-  news: 'News',
+/**
+ * Fallback type labels used when the server hasn't yet provided metadata
+ * (e.g., pre-auth render, or /briefings/types fetch failed). The runtime
+ * state's `typeMetadata` takes precedence when populated.
+ */
+const FALLBACK_TYPE_LABELS: Record<string, string> = {
+  work: "Work",
+  news: "News",
+  community: "Community",
 };
+
+function formatTypeLabel(typeKey: string): string {
+  if (FALLBACK_TYPE_LABELS[typeKey]) return FALLBACK_TYPE_LABELS[typeKey];
+  // Title-case unknown types so bespoke user briefing types render sensibly
+  return typeKey.charAt(0).toUpperCase() + typeKey.slice(1);
+}
 
 /**
  * Formats a raw token count into compact K/M notation.
@@ -31,13 +43,14 @@ export function AppHeader() {
   const setView = useStore((s) => s.setView);
   const activeType = useStore((s) => s.activeType);
   const availableTypes = useStore((s) => s.availableTypes);
+  const typeMetadata = useStore((s) => s.typeMetadata);
   const setActiveType = useStore((s) => s.setActiveType);
   const triggerBriefing = useStore((s) => s.triggerBriefing);
   const activeTrigger = useStore((s) => s.activeTrigger);
   const sessionMode = useStore((s) => s.sessionMode);
   const logout = useStore((s) => s.logout);
   const currentBriefing = useStore((s) => s.briefings[s.activeType]);
-  const ago = useRelativeTime(currentBriefing?.generatedAt ?? '');
+  const ago = useRelativeTime(currentBriefing?.generatedAt ?? "");
   const isTriggering = !!activeTrigger;
   const spinOnThisTab = activeTrigger?.type === activeType;
 
@@ -48,32 +61,39 @@ export function AppHeader() {
   useEffect(() => {
     if (!dropdownOpen) return;
     function handleClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
         setDropdownOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, [dropdownOpen]);
 
   return (
-    <header className="
+    <header
+      className="
       sticky top-0 z-20
       bg-background/80 backdrop-blur-xl
       border-b border-border-subtle
       px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-3
-    ">
+    "
+    >
       {/* Row 1: Title + logout */}
       <div className="flex items-center justify-between mb-3">
         <button
-          onClick={() => setView({ view: 'today' })}
+          onClick={() => setView({ view: "today" })}
           className="font-display text-[20px] text-primary italic tracking-tight"
         >
           Chief of Staff
         </button>
         <div className="flex items-center gap-3">
-          {typeof __COMMIT_HASH__ !== 'undefined' && (
-            <span className="font-mono text-[0.5rem] text-muted/30">{__COMMIT_HASH__}</span>
+          {typeof __COMMIT_HASH__ !== "undefined" && (
+            <span className="font-mono text-[0.5rem] text-muted/30">
+              {__COMMIT_HASH__}
+            </span>
           )}
           <button
             onClick={logout}
@@ -94,13 +114,14 @@ export function AppHeader() {
               className={`
                 relative font-mono text-[11px] uppercase tracking-wider pb-1
                 transition-colors duration-200
-                ${t === activeType
-                  ? 'text-accent'
-                  : 'text-muted hover:text-primary'
+                ${
+                  t === activeType
+                    ? "text-accent"
+                    : "text-muted hover:text-primary"
                 }
               `}
             >
-              {TYPE_LABELS[t] ?? t}
+              {typeMetadata[t]?.label ?? formatTypeLabel(t)}
               {t === activeType && (
                 <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent rounded-full" />
               )}
@@ -111,7 +132,9 @@ export function AppHeader() {
         <div ref={dropdownRef} className="relative flex items-stretch">
           {/* Main generate button */}
           <button
-            onClick={() => { void triggerBriefing(); }}
+            onClick={() => {
+              void triggerBriefing();
+            }}
             disabled={isTriggering}
             className="
               flex items-center gap-1.5
@@ -125,14 +148,16 @@ export function AppHeader() {
               transition-all duration-200
             "
           >
-            <RefreshCw size={12} className={spinOnThisTab ? 'animate-spin' : ''} />
+            <RefreshCw
+              size={12}
+              className={spinOnThisTab ? "animate-spin" : ""}
+            />
             <span>
               {isTriggering
-                ? 'Running...'
-                : sessionMode.type === 'resume'
-                  ? 'Resume'
-                  : 'Generate'
-              }
+                ? "Running..."
+                : sessionMode.type === "resume"
+                  ? "Resume"
+                  : "Generate"}
             </span>
           </button>
           {/* Divider */}
@@ -154,7 +179,7 @@ export function AppHeader() {
           >
             <ChevronDown
               size={12}
-              className={`transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`}
+              className={`transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
             />
           </button>
 
@@ -167,20 +192,19 @@ export function AppHeader() {
 
       {/* Row 3: Temporal tabs + meta */}
       <div className="flex items-center gap-4">
-        {(['today', 'history', 'chats'] as const).map((v) => (
+        {(["today", "history", "chats"] as const).map((v) => (
           <button
             key={v}
             onClick={() => setView({ view: v })}
             className={`
               relative font-mono text-[10px] uppercase tracking-wider pb-0.5
               transition-colors duration-200
-              ${v === view
-                ? 'text-accent-dim'
-                : 'text-muted hover:text-primary'
+              ${
+                v === view ? "text-accent-dim" : "text-muted hover:text-primary"
               }
             `}
           >
-            {v === 'today' ? 'Current' : v === 'history' ? 'History' : 'Chats'}
+            {v === "today" ? "Current" : v === "history" ? "History" : "Chats"}
             {v === view && (
               <span className="absolute bottom-0 left-0 right-0 h-px bg-accent-dim rounded-full" />
             )}
@@ -192,15 +216,18 @@ export function AppHeader() {
             <span className="mx-1.5 text-border">·</span>
             {ago}
             <span className="mx-1.5 text-border">·</span>
-            {currentBriefing.tokenUsage
-              ? (
-                <>
-                  <span className="text-accent">{formatTokens(currentBriefing.tokenUsage.totalTokens)}</span>
-                  <span className="text-muted">/{formatTokens(currentBriefing.tokenUsage.contextWindow)}</span>
-                </>
-              )
-              : <span className="text-muted">—</span>
-            }
+            {currentBriefing.tokenUsage ? (
+              <>
+                <span className="text-accent">
+                  {formatTokens(currentBriefing.tokenUsage.totalTokens)}
+                </span>
+                <span className="text-muted">
+                  /{formatTokens(currentBriefing.tokenUsage.contextWindow)}
+                </span>
+              </>
+            ) : (
+              <span className="text-muted">—</span>
+            )}
             <button
               onClick={() => void generateAndDownloadPdf(currentBriefing)}
               aria-label="Download PDF"
