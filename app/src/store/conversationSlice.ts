@@ -56,7 +56,7 @@ export interface PendingFollowUp {
 export interface ConversationSlice {
   // Follow-up (keyed by briefingId or conversationId)
   followUpHistory: Record<string, Message[]>;
-  pendingFollowUp: PendingFollowUp | null;
+  pendingFollowUps: Record<string, PendingFollowUp>;
   followUpError: string | null;
 
   // Hydration state (for FollowUpBar)
@@ -100,6 +100,15 @@ interface ChatsSliceDeps {
 type StoreGet = () => ConversationSlice & ChatsSliceDeps;
 type StoreSet = (partial: Partial<ConversationSlice & ChatsSliceDeps>) => void;
 
+/** Remove a pending entry by historyKey, returning the updated record for set(). */
+function clearPending(
+  get: () => { pendingFollowUps: Record<string, PendingFollowUp> },
+  historyKey: string,
+) {
+  const { [historyKey]: _, ...rest } = get().pendingFollowUps;
+  return { pendingFollowUps: rest };
+}
+
 
 /**
  * Delivers a completed follow-up response into the store — appends the assistant
@@ -125,13 +134,13 @@ function deliverFollowUpResponse(
   const { historyKey, conversationId, briefingId } = context;
   const { get, set } = store;
 
-  // Only clear pendingFollowUp if it matches this historyKey (prevents clobbering
-  // a different conversation's pending state during concurrent sends)
-  const clearPending = get().pendingFollowUp?.historyKey === historyKey ? { pendingFollowUp: null } : {};
+  // Clear this conversation's pending state (keyed by historyKey).
+  // Other conversations' pending states are unaffected.
+  const pendingClear = clearPending(get, historyKey);
 
   // Guard: server may return completed without assistantMessage (schema drift, server bug)
   if (!job.assistantMessage) {
-    set(clearPending);
+    set(pendingClear);
     return;
   }
 
@@ -140,7 +149,7 @@ function deliverFollowUpResponse(
   const withAssistant = [...current, job.assistantMessage];
   set({
     followUpHistory: { ...get().followUpHistory, [historyKey]: withAssistant },
-    ...clearPending,
+    ...pendingClear,
   });
 
   // Assign conversation name if Claude provided one
@@ -211,20 +220,18 @@ function handleFollowUpError(
   } else {
     set({ followUpError: 'Something went wrong. Try again.' });
   }
-  // Only clear pendingFollowUp if it matches this historyKey
-  if (get().pendingFollowUp?.historyKey === historyKey) {
-    set({ pendingFollowUp: null });
-  }
+  // Clear this conversation's pending entry (keyed by historyKey)
+  set(clearPending(get, historyKey));
 }
 
 /** Initial conversation data state — used by createConversationSlice and logout reset. */
 export const CONVERSATION_INITIAL_STATE: Pick<
   ConversationSlice,
-  'followUpHistory' | 'pendingFollowUp' | 'followUpError' | 'followUpHydrating' |
+  'followUpHistory' | 'pendingFollowUps' | 'followUpError' | 'followUpHydrating' |
   'activeConversationId' | 'briefingConversations' | 'prefillQuestion'
 > = {
   followUpHistory: {},
-  pendingFollowUp: null,
+  pendingFollowUps: {},
   followUpError: null,
   followUpHydrating: {},
   activeConversationId: null,
@@ -299,8 +306,7 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
 
       // Guard: reject if THIS conversation already has a pending follow-up.
       // Scoped to historyKey so other conversations can still send.
-      const currentPending = get().pendingFollowUp;
-      if (currentPending && currentPending.historyKey === historyKey) {
+      if (historyKey in get().pendingFollowUps) {
         return;
       }
 
@@ -317,7 +323,7 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
       const startedAt = Date.now();
       set({
         followUpHistory: { ...get().followUpHistory, [historyKey]: [...history, optimisticMessage] },
-        pendingFollowUp: { historyKey, startedAt },
+        pendingFollowUps: { ...get().pendingFollowUps, [historyKey]: { historyKey, startedAt } },
         followUpError: null,
       });
 
@@ -349,8 +355,7 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
               deliverFollowUpResponse(job, { historyKey, conversationId, briefingId }, { get, set });
             },
             onFailed(error) {
-              const clearPending = get().pendingFollowUp?.historyKey === historyKey ? { pendingFollowUp: null } : {};
-              set({ followUpError: error, ...clearPending });
+              set({ followUpError: error, ...clearPending(get, historyKey) });
             },
             onTimeout() {
               // Try recovering from D1 — the push-on-completion may have persisted
@@ -359,33 +364,31 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
                 apiFetchMessages({ conversationId }).then(msgs => {
                   if (msgs.length > 0 && msgs[msgs.length - 1].role === 'assistant') {
                     // Recovery success: D1 has the assistant message
-                    const clearPendingOnRecovery = get().pendingFollowUp?.historyKey === historyKey ? { pendingFollowUp: null } : {};
                     set({
                       followUpHistory: { ...get().followUpHistory, [historyKey]: msgs },
-                      ...clearPendingOnRecovery,
+                      ...clearPending(get, historyKey),
                     });
                   } else {
                     set({
                       followUpError: 'Response timed out. Claude may still be working — check back later.',
-                      ...(get().pendingFollowUp?.historyKey === historyKey ? { pendingFollowUp: null } : {}),
+                      ...clearPending(get, historyKey),
                     });
                   }
                 }).catch(() => {
                   set({
                     followUpError: 'Response timed out. Claude may still be working — check back later.',
-                    ...(get().pendingFollowUp?.historyKey === historyKey ? { pendingFollowUp: null } : {}),
+                    ...clearPending(get, historyKey),
                   });
                 });
               } else {
                 set({
                   followUpError: 'Response timed out. Claude may still be working — check back later.',
-                  ...(get().pendingFollowUp?.historyKey === historyKey ? { pendingFollowUp: null } : {}),
+                  ...clearPending(get, historyKey),
                 });
               }
             },
             onTerminalError(error) {
-              const clearPending = get().pendingFollowUp?.historyKey === historyKey ? { pendingFollowUp: null } : {};
-              set({ followUpError: error, ...clearPending });
+              set({ followUpError: error, ...clearPending(get, historyKey) });
             },
           },
           // fetchStatus: the HTTP call that polls for the job result.

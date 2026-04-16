@@ -50,11 +50,10 @@ export function FollowUpBar({
     (s) => s.followUpHistory[historyKey] ?? EMPTY_HISTORY,
   );
   const isHydrating = useStore((s) => s.followUpHydrating[briefingId] ?? false);
-  const pendingFollowUp = useStore((s) => s.pendingFollowUp);
+  const pendingFollowUp = useStore((s) => s.pendingFollowUps[historyKey]);
   const sendFollowUp = useStore((s) => s.sendFollowUp);
   const hydrateFollowUpHistory = useStore((s) => s.hydrateFollowUpHistory);
-  const loading =
-    !!pendingFollowUp && pendingFollowUp.historyKey === historyKey;
+  const loading = !!pendingFollowUp;
   const prefillQuestion = useStore((s) => s.prefillQuestion);
   const setPrefillQuestion = useStore((s) => s.setPrefillQuestion);
 

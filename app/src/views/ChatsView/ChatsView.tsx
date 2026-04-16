@@ -84,10 +84,10 @@ function ConversationRow({ conversation, onSelect }: {
   conversation: ConversationListItem;
   onSelect: () => void;
 }) {
-  const pendingFollowUp = useStore((s) => s.pendingFollowUp);
+  const pendingFollowUps = useStore((s) => s.pendingFollowUps);
   // Match by historyKey — conversationId is always the primary key
   const thisHistoryKey = conversation.id;
-  const isPending = !!pendingFollowUp && pendingFollowUp.historyKey === thisHistoryKey;
+  const isPending = thisHistoryKey in pendingFollowUps;
 
   const hasMessages = conversation.lastMessageAt && conversation.messageCount > 0;
   let timeStr: string;

@@ -108,7 +108,7 @@ describe('initial state', () => {
   it('starts with empty follow-up state', () => {
     const { get } = createTestSlice();
     expect(get().followUpHistory).toEqual({});
-    expect(get().pendingFollowUp).toBeNull();
+    expect(get().pendingFollowUps).toEqual({});
     expect(get().followUpError).toBeNull();
     expect(get().followUpHydrating).toEqual({});
   });
@@ -184,7 +184,7 @@ describe('sendFollowUp - success', () => {
     expect(historyAfterEnqueue).toHaveLength(1);
     expect(historyAfterEnqueue![0].id).toBe('um-1'); // reconciled from temp
     expect(historyAfterEnqueue![0].content).toBe('What next?');
-    expect(get().pendingFollowUp).not.toBeNull(); // still pending
+    expect(get().pendingFollowUps['b-001']).toBeDefined(); // still pending
 
     // Advance timer to trigger first poll
     await vi.advanceTimersByTimeAsync(2_000);
@@ -193,25 +193,25 @@ describe('sendFollowUp - success', () => {
     expect(historyAfterPoll).toHaveLength(2); // user + assistant
     expect(historyAfterPoll![1].role).toBe('assistant');
     expect(historyAfterPoll![1].content).toBe('Here is the answer');
-    expect(get().pendingFollowUp).toBeNull();
+    expect(get().pendingFollowUps['b-001']).toBeUndefined();
     expect(get().followUpError).toBeNull();
   });
 
-  it('sets pendingFollowUp with historyKey and startedAt during request', async () => {
+  it('sets pendingFollowUps[historyKey] with startedAt during request', async () => {
     mockSendFollowUp.mockResolvedValueOnce(makeEnqueueResponse());
     mockFetchFollowUpStatus.mockResolvedValueOnce({ id: 'job-001', sessionId: 's', status: 'running' });
 
     const { get } = createTestSlice();
     const promise = get().sendFollowUp({ briefingId: 'b-001', sessionId: 's', question: 'q' });
 
-    // pendingFollowUp is set synchronously before await
-    expect(get().pendingFollowUp).not.toBeNull();
-    expect(get().pendingFollowUp!.historyKey).toBe('b-001');
-    expect(get().pendingFollowUp!.startedAt).toBeGreaterThan(0);
+    // pendingFollowUps entry is set synchronously before await
+    expect(get().pendingFollowUps['b-001']).toBeDefined();
+    expect(get().pendingFollowUps['b-001']!.historyKey).toBe('b-001');
+    expect(get().pendingFollowUps['b-001']!.startedAt).toBeGreaterThan(0);
 
     await promise;
     // Still pending after enqueue (waiting for poll to complete)
-    expect(get().pendingFollowUp).not.toBeNull();
+    expect(get().pendingFollowUps['b-001']).toBeDefined();
 
     // Complete the poll — first poll returns 'running' (already mocked above),
     // then we mock the completed response and advance again
@@ -222,7 +222,7 @@ describe('sendFollowUp - success', () => {
     // Allow microtasks from AbortController signal checks to settle
     await vi.advanceTimersByTimeAsync(100);
 
-    expect(get().pendingFollowUp).toBeNull();
+    expect(get().pendingFollowUps['b-001']).toBeUndefined();
   });
 
   it('handles null userMessage in enqueue response (D1 was down)', async () => {
@@ -263,7 +263,7 @@ describe('sendFollowUp - success', () => {
     // Third poll at 6s
     await vi.advanceTimersByTimeAsync(2_000);
     expect(mockFetchFollowUpStatus).toHaveBeenCalledTimes(3);
-    expect(get().pendingFollowUp).toBeNull(); // completed
+    expect(get().pendingFollowUps['b-001']).toBeUndefined(); // completed
   });
 });
 
@@ -283,7 +283,7 @@ describe('sendFollowUp - errors', () => {
     const history = get().followUpHistory['b-001'];
     expect(history).toEqual([]); // optimistic removed
     expect(get().followUpError).toBe('Tunnel down');
-    expect(get().pendingFollowUp).toBeNull();
+    expect(get().pendingFollowUps['b-001']).toBeUndefined();
   });
 
   it('reconciles temp ID when persisted but tunnel failed', async () => {
@@ -311,7 +311,7 @@ describe('sendFollowUp - errors', () => {
     await get().sendFollowUp({ briefingId: 'b-001', sessionId: 's', question: 'q' });
 
     expect(get().followUpError).toBe('Something went wrong. Try again.');
-    expect(get().pendingFollowUp).toBeNull();
+    expect(get().pendingFollowUps['b-001']).toBeUndefined();
   });
 
   it('appends to existing history, does not overwrite', async () => {

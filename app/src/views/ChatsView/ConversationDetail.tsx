@@ -21,7 +21,7 @@ export function ConversationDetail() {
   const loading = useStore((s) => s.selectedConversationLoading);
   const clearSelected = useStore((s) => s.clearSelectedConversation);
   const sendFollowUp = useStore((s) => s.sendFollowUp);
-  const pendingFollowUp = useStore((s) => s.pendingFollowUp);
+  const pendingFollowUps = useStore((s) => s.pendingFollowUps);
   const error = useStore((s) => s.conversationErrors[selected?.id ?? '']);
 
   const renameConversation = useStore((s) => s.renameConversation);
@@ -46,7 +46,8 @@ export function ConversationDetail() {
   // Only show loading indicator for THIS conversation's pending follow-up.
   // Match by conversationId — always the primary history key
   const thisHistoryKey = selected.id;
-  const isThisPending = !!pendingFollowUp && pendingFollowUp.historyKey === thisHistoryKey;
+  const pendingFollowUp = pendingFollowUps[thisHistoryKey];
+  const isThisPending = !!pendingFollowUp;
 
   function handleCopySessionId() {
     if (!selected?.sessionId) return;

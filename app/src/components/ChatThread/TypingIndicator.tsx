@@ -9,7 +9,7 @@
  * schedule which runs on an adaptive timer in the store.
  *
  * Used by: `app/src/components/ChatThread/ChatThread.tsx`
- * See also: `app/src/store/conversationSlice.ts` -- sets pendingFollowUp.startedAt
+ * See also: `app/src/store/conversationSlice.ts` -- sets pendingFollowUps[historyKey].startedAt
  */
 import { useState, useEffect } from 'react';
 
