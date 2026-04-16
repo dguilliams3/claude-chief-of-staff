@@ -26,6 +26,15 @@
             "command": "python \"$(git rev-parse --show-toplevel)/.claude/hooks/plan-mode-reminder.py\""
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$(git rev-parse --show-toplevel)/.claude/hooks/block-destructive-git.py\""
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
