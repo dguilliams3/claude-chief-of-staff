@@ -7,6 +7,7 @@
 import { existsSync, readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import type { FeedSource } from './feeds/types';
 
 const LOCAL_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'local');
 
@@ -23,4 +24,21 @@ export function readLocalOverride(relativePath: string): string | null {
     return readFileSync(fullPath, 'utf-8').trim();
   }
   return null;
+}
+
+/**
+ * Read per-instance feed configuration from `local/feeds.json`.
+ * Returns an empty array when the file is missing or invalid.
+ * Tested by: `agent/__tests__/local-config.test.ts`
+ */
+export function readLocalFeeds(): FeedSource[] {
+  const raw = readLocalOverride('feeds.json');
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as FeedSource[]) : [];
+  } catch {
+    return [];
+  }
 }
