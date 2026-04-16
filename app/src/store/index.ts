@@ -13,7 +13,7 @@
  * Do NOT: Call `fetch` directly — domain API modules handle all fetches
  */
 import { create } from "zustand";
-import { subscribeToPush } from "@/lib/push";
+import { subscribeToPush, checkAndRenewPushSubscription } from "@/lib/push";
 import { initAutoLogin, createAuthSlice, type AuthSlice } from "./authSlice";
 import { createBriefingSlice, type BriefingSlice } from "./briefingSlice";
 import {
@@ -106,9 +106,16 @@ useStore.subscribe((state) => {
     // Hydrate briefing-type registry so the UI derives available tabs
     // from the server, not from hardcoded work/news assumptions.
     state.refreshBriefingTypes();
-    // Subscribe to push notifications after auth (non-blocking, non-fatal)
+    // Subscribe to push notifications after auth (non-blocking, non-fatal).
+    // No userGesture — re-uses granted permission only; Bell button in AppHeader
+    // handles the initial iOS-compliant user-gesture permission request.
     subscribeToPush().catch(() => {
       /* permission denied or not supported */
+    });
+    // Defense-in-depth: re-subscribe weekly / on expiration-time approach so
+    // push silently dying after 30-90 days doesn't leave users without notifs.
+    checkAndRenewPushSubscription().catch(() => {
+      /* non-fatal */
     });
   }
   prevAuthenticated = state.authenticated;

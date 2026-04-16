@@ -6,4 +6,5 @@
  * See also: `app/src/sw.ts` — service worker that handles incoming push events
  */
 
-export { subscribeToPush } from './subscribe';
+export { subscribeToPush, getPushPermissionState } from "./subscribe";
+export { checkAndRenewPushSubscription } from "./renewal";

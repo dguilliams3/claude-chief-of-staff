@@ -1,9 +1,10 @@
-import { RefreshCw, ChevronDown, Download } from "lucide-react";
+import { RefreshCw, ChevronDown, Download, Bell } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useStore } from "@/store";
 import { useRelativeTime } from "@/hooks/useRelativeTime";
 import { SessionDropdown } from "./SessionDropdown";
 import { generateAndDownloadPdf } from "@/lib/export";
+import { subscribeToPush, getPushPermissionState } from "@/lib/push";
 
 /**
  * Fallback type labels used when the server hasn't yet provided metadata
@@ -54,6 +55,18 @@ export function AppHeader() {
   const isTriggering = !!activeTrigger;
   const spinOnThisTab = activeTrigger?.type === activeType;
 
+  // Push notification permission state — show bell when not yet granted.
+  // Initial subscribe without gesture fails on iOS; Bell gives users a
+  // path to re-enable after dismissing the initial browser prompt.
+  const [pushState, setPushState] = useState<
+    NotificationPermission | "unsupported" | "subscribed"
+  >(() => getPushPermissionState());
+
+  async function handleEnablePush() {
+    const success = await subscribeToPush({ userGesture: true });
+    setPushState(success ? "subscribed" : getPushPermissionState());
+  }
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -94,6 +107,15 @@ export function AppHeader() {
             <span className="font-mono text-[0.5rem] text-muted/30">
               {__COMMIT_HASH__}
             </span>
+          )}
+          {pushState === "default" && (
+            <button
+              onClick={() => void handleEnablePush()}
+              aria-label="Enable notifications"
+              className="text-muted/50 hover:text-accent transition-colors min-h-12 min-w-12 flex items-center justify-center"
+            >
+              <Bell size={14} />
+            </button>
           )}
           <button
             onClick={logout}

@@ -14,7 +14,7 @@
  * Do NOT: Call before service worker is registered — guard with navigator.serviceWorker.ready
  */
 
-import { API_BASE, headers } from '@/lib/api';
+import { API_BASE, headers } from "@/lib/api";
 
 /**
  * Fetches the VAPID public key from the Worker.
@@ -25,9 +25,11 @@ let cachedVapidKey: string | null = null;
 async function getVapidPublicKey(): Promise<string | null> {
   if (cachedVapidKey) return cachedVapidKey;
   try {
-    const res = await fetch(`${API_BASE}/push/vapid-public-key`, { headers: headers() });
+    const res = await fetch(`${API_BASE}/push/vapid-public-key`, {
+      headers: headers(),
+    });
     if (!res.ok) return null;
-    const data = await res.json() as { publicKey: string };
+    const data = (await res.json()) as { publicKey: string };
     cachedVapidKey = data.publicKey;
     return data.publicKey;
   } catch {
@@ -39,8 +41,8 @@ async function getVapidPublicKey(): Promise<string | null> {
  * Converts a base64url string to a Uint8Array for applicationServerKey.
  */
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = atob(base64);
   const outputArray = new Uint8Array(rawData.length);
   for (let i = 0; i < rawData.length; i++) {
@@ -50,32 +52,62 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 /**
+ * Returns current notification permission state. Used by UI to decide whether
+ * to show the "Enable notifications" button.
+ */
+export function getPushPermissionState():
+  | NotificationPermission
+  | "unsupported" {
+  if (!("Notification" in window) || !("serviceWorker" in navigator))
+    return "unsupported";
+  return Notification.permission;
+}
+
+/**
  * Requests notification permission and subscribes the browser for push notifications.
  *
  * Idempotent — safe to call multiple times (re-subscribing updates the subscription).
  * Returns true if successfully subscribed, false otherwise.
  *
- * Upstream: `app/src/store/index.ts` — called after login/auto-login
+ * @param options.userGesture - When true, will prompt for permission if not yet granted.
+ *   When false (default), only subscribes if permission is already 'granted'.
+ *   iOS Safari REQUIRES a user gesture (button tap) to show the permission prompt.
+ *   Calling requestPermission() without a gesture silently fails on iOS.
+ *
+ * Upstream: `app/src/store/index.ts` — called after login/auto-login (no gesture)
+ * Upstream: `app/src/components/AppHeader/AppHeader.tsx` — Bell button (with gesture)
  * Downstream: `app/src/lib/push/subscribe.ts::getVapidPublicKey` → Worker `GET /push/vapid-public-key`
  * Downstream: Worker `POST /push/subscribe`
  */
-export async function subscribeToPush(): Promise<boolean> {
+export async function subscribeToPush(
+  options: { userGesture?: boolean } = {},
+): Promise<boolean> {
+  const { userGesture = false } = options;
+
   // Guard: notifications not supported
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-    console.log('[Push] Not supported in this browser');
+  if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+    console.log("[Push] Not supported in this browser");
     return false;
   }
 
   // Check existing permission before requesting (avoids needless API calls)
   const existingPermission = Notification.permission;
-  if (existingPermission === 'denied') {
-    console.log('[Push] Permission previously denied');
+  if (existingPermission === "denied") {
+    console.log("[Push] Permission previously denied");
     return false;
   }
-  if (existingPermission !== 'granted') {
+
+  if (existingPermission !== "granted") {
+    // Only prompt if called from a user gesture (iOS requirement)
+    if (!userGesture) {
+      console.log(
+        "[Push] Permission not yet granted — waiting for user gesture",
+      );
+      return false;
+    }
     const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      console.log('[Push] Permission denied');
+    if (permission !== "granted") {
+      console.log("[Push] Permission denied");
       return false;
     }
   }
@@ -83,7 +115,7 @@ export async function subscribeToPush(): Promise<boolean> {
   // Get VAPID key
   const vapidKey = await getVapidPublicKey();
   if (!vapidKey) {
-    console.error('[Push] Failed to fetch VAPID public key');
+    console.error("[Push] Failed to fetch VAPID public key");
     return false;
   }
 
@@ -95,7 +127,8 @@ export async function subscribeToPush(): Promise<boolean> {
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidKey).buffer as ArrayBuffer,
+      applicationServerKey: urlBase64ToUint8Array(vapidKey)
+        .buffer as ArrayBuffer,
     });
   }
 
@@ -103,7 +136,7 @@ export async function subscribeToPush(): Promise<boolean> {
   const subJson = subscription.toJSON();
   try {
     const res = await fetch(`${API_BASE}/push/subscribe`, {
-      method: 'POST',
+      method: "POST",
       headers: headers(),
       body: JSON.stringify({
         endpoint: subJson.endpoint,
@@ -111,13 +144,13 @@ export async function subscribeToPush(): Promise<boolean> {
       }),
     });
     if (!res.ok) {
-      console.error('[Push] Subscribe API failed:', res.status);
+      console.error("[Push] Subscribe API failed:", res.status);
       return false;
     }
-    console.log('[Push] Subscribed successfully');
+    console.log("[Push] Subscribed successfully");
     return true;
   } catch (err) {
-    console.error('[Push] Subscribe failed:', err);
+    console.error("[Push] Subscribe failed:", err);
     return false;
   }
 }
