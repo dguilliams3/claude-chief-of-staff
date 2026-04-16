@@ -8,15 +8,20 @@
  * See also: `agent/prompts/compile.ts` — builds the system/user prompts fed to callClaude
  * Do NOT: Pass resolved .cmd paths — cmd.exe mangles backslashes. Use bare 'claude' command.
  */
-import { execFile } from 'node:child_process';
-import { logger } from './logger';
+import { execFile } from "node:child_process";
+import { logger } from "./logger";
 
 // On Windows, .cmd files require shell:true (they're cmd.exe scripts, not PE executables).
 // Using bare 'claude' with shell:true lets cmd.exe resolve via PATH+PATHEXT — proven working.
 // Full resolved paths get mangled by cmd.exe backslash handling.
-const CLAUDE_CMD = 'claude';
+const CLAUDE_CMD = "claude";
 
-export type ClaudeErrorCode = 'NOT_FOUND' | 'TIMEOUT' | 'SESSION_EXPIRED' | 'PARSE_ERROR' | 'UNKNOWN';
+export type ClaudeErrorCode =
+  | "NOT_FOUND"
+  | "TIMEOUT"
+  | "SESSION_EXPIRED"
+  | "PARSE_ERROR"
+  | "UNKNOWN";
 
 /** Typed error for Claude CLI failures. Code field enables callers to branch on failure reason. */
 export class ClaudeCliError extends Error {
@@ -26,7 +31,7 @@ export class ClaudeCliError extends Error {
     public readonly stderr?: string,
   ) {
     super(message);
-    this.name = 'ClaudeCliError';
+    this.name = "ClaudeCliError";
   }
 }
 
@@ -34,7 +39,7 @@ export interface BuildClaudeArgsOptions {
   system: string;
   resumeId?: string;
   model?: string;
-  outputFormat?: 'json' | 'text';
+  outputFormat?: "json" | "text";
   permissionMode?: string;
 }
 
@@ -47,16 +52,18 @@ export function buildClaudeArgs({
   system,
   resumeId,
   model,
-  outputFormat = 'json',
-  permissionMode = 'bypassPermissions',
+  outputFormat = "json",
+  permissionMode = "bypassPermissions",
 }: BuildClaudeArgsOptions): string[] {
-  const args = ['--print', '--output-format', outputFormat];
+  const args = ["--print", "--output-format", outputFormat];
 
-  if (permissionMode) args.push('--permission-mode', permissionMode);
-  if (resumeId) args.push('--resume', resumeId);
-  if (model) args.push('--model', model);
-  // System prompt LAST — it's the longest arg and cmd.exe may mangle trailing args
-  if (system) args.push('--system-prompt', system);
+  if (permissionMode) args.push("--permission-mode", permissionMode);
+  if (resumeId) args.push("--resume", resumeId);
+  if (model) args.push("--model", model);
+  // System prompt LAST — it's the longest arg and cmd.exe may mangle trailing args.
+  // Skip on resume: the session already has its system prompt from creation.
+  // Re-sending it bloats context by duplicating the prompt on every turn.
+  if (system && !resumeId) args.push("--system-prompt", system);
 
   return args;
 }
@@ -73,9 +80,20 @@ export interface CallClaudeOptions {
  * @returns Raw stdout from the CLI (JSON or text depending on outputFormat)
  * @throws {ClaudeCliError} with classified error code on failure
  */
-export function callClaude({ args, input, timeoutMs = 600_000 }: CallClaudeOptions): Promise<string> {
+export function callClaude({
+  args,
+  input,
+  timeoutMs = 600_000,
+}: CallClaudeOptions): Promise<string> {
   return new Promise((resolve, reject) => {
-    logger.info({ args: args.filter(a => a !== '--system-prompt' && !a.startsWith('You are')) }, 'Invoking claude CLI');
+    logger.info(
+      {
+        args: args.filter(
+          (a) => a !== "--system-prompt" && !a.startsWith("You are"),
+        ),
+      },
+      "Invoking claude CLI",
+    );
 
     // shell:true required on Windows — .cmd files are cmd.exe scripts, not executables.
     // Escape cmd.exe metacharacters in args to prevent & | ( ) etc from breaking the command.
@@ -83,14 +101,21 @@ export function callClaude({ args, input, timeoutMs = 600_000 }: CallClaudeOptio
     const child = execFile(
       CLAUDE_CMD,
       escapedArgs,
-      { timeout: timeoutMs, shell: true, env: { ...process.env, CLAUDECODE: undefined } },
+      {
+        timeout: timeoutMs,
+        shell: true,
+        env: { ...process.env, CLAUDECODE: undefined },
+      },
       (err, stdout, stderr) => {
         if (err) {
           const code = classifyError(err, stderr);
-          logger.error({ code, stderr: stderr?.slice(0, 200) }, 'Claude CLI failed');
+          logger.error(
+            { code, stderr: stderr?.slice(0, 200) },
+            "Claude CLI failed",
+          );
           reject(new ClaudeCliError(stderr || err.message, code, stderr));
         } else {
-          logger.info({ outputLen: stdout.length }, 'Claude CLI completed');
+          logger.info({ outputLen: stdout.length }, "Claude CLI completed");
           resolve(stdout);
         }
       },
@@ -108,17 +133,20 @@ export function callClaude({ args, input, timeoutMs = 600_000 }: CallClaudeOptio
  * receives argv through Node's child_process which handles the unwrapping.
  * Proven working in production since RUN-20260305-1714. */
 function escapeCmdArg(arg: string): string {
-  if (process.platform !== 'win32') return arg;
+  if (process.platform !== "win32") return arg;
   // Wrap in double quotes and escape internal double quotes.
   // cmd.exe metacharacters inside double quotes are safe except for: " % !
   // %VAR% triggers env expansion; !VAR! triggers delayed expansion.
-  return `"${arg.replace(/"/g, '\\"').replace(/%/g, '%%').replace(/!/g, '^!')}"`;
+  return `"${arg.replace(/"/g, '\\"').replace(/%/g, "%%").replace(/!/g, "^!")}"`;
 }
 
 /** Maps child_process error signals to a ClaudeErrorCode for structured handling. */
-function classifyError(err: Error & { code?: string | number | null; killed?: boolean }, stderr: string): ClaudeErrorCode {
-  if (err.code === 'ENOENT') return 'NOT_FOUND';
-  if (err.killed) return 'TIMEOUT';
-  if (stderr?.includes('No conversation found')) return 'SESSION_EXPIRED';
-  return 'UNKNOWN';
+function classifyError(
+  err: Error & { code?: string | number | null; killed?: boolean },
+  stderr: string,
+): ClaudeErrorCode {
+  if (err.code === "ENOENT") return "NOT_FOUND";
+  if (err.killed) return "TIMEOUT";
+  if (stderr?.includes("No conversation found")) return "SESSION_EXPIRED";
+  return "UNKNOWN";
 }

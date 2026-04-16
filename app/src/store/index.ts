@@ -12,23 +12,27 @@
  * Do NOT: Import React components here — store is framework-agnostic
  * Do NOT: Call `fetch` directly — domain API modules handle all fetches
  */
-import { create } from 'zustand';
-import { subscribeToPush } from '@/lib/push';
-import { initAutoLogin, createAuthSlice, type AuthSlice } from './authSlice';
-import { createBriefingSlice, type BriefingSlice } from './briefingSlice';
-import { createConversationSlice, type ConversationSlice } from './conversationSlice';
-import { createChatsSlice, type ChatsSlice } from './chatsSlice';
+import { create } from "zustand";
+import { subscribeToPush } from "@/lib/push";
+import { initAutoLogin, createAuthSlice, type AuthSlice } from "./authSlice";
+import { createBriefingSlice, type BriefingSlice } from "./briefingSlice";
+import {
+  createConversationSlice,
+  type ConversationSlice,
+} from "./conversationSlice";
+import { createChatsSlice, type ChatsSlice } from "./chatsSlice";
 
-interface CosStore extends AuthSlice, BriefingSlice, ConversationSlice, ChatsSlice {
+interface CosStore
+  extends AuthSlice, BriefingSlice, ConversationSlice, ChatsSlice {
   // View routing
-  view: 'today' | 'history' | 'chats';
-  setView: (options: { view: 'today' | 'history' | 'chats' }) => void;
+  view: "today" | "history" | "chats";
+  setView: (options: { view: "today" | "history" | "chats" }) => void;
 }
 
 export const useStore = create<CosStore>((set, get) => {
   // Auto-login: validate stored token on startup (side effect before slice creation)
-  const storedToken = initAutoLogin(
-    (partial) => set(partial as Partial<CosStore>),
+  const storedToken = initAutoLogin((partial) =>
+    set(partial as Partial<CosStore>),
   );
 
   return {
@@ -40,11 +44,15 @@ export const useStore = create<CosStore>((set, get) => {
     ),
 
     // View routing
-    view: 'today' as const,
+    view: "today" as const,
 
-    setView({ view }: { view: 'today' | 'history' | 'chats' }) {
-      set({ view, selectedBriefingId: null, selectedBriefing: null } as Partial<CosStore>);
-      if (view === 'chats') {
+    setView({ view }: { view: "today" | "history" | "chats" }) {
+      set({
+        view,
+        selectedBriefingId: null,
+        selectedBriefing: null,
+      } as Partial<CosStore>);
+      if (view === "chats") {
         get().clearSelectedConversation();
       }
     },
@@ -82,7 +90,20 @@ useStore.subscribe((state) => {
   if (state.authenticated && !prevAuthenticated) {
     state.silentRefresh();
     // Subscribe to push notifications after auth (non-blocking, non-fatal)
-    subscribeToPush().catch(() => { /* permission denied or not supported */ });
+    subscribeToPush().catch(() => {
+      /* permission denied or not supported */
+    });
   }
   prevAuthenticated = state.authenticated;
 });
+
+// Re-fetch briefings when the tab becomes visible again (e.g., user switches back
+// to the PWA after triggering a briefing and going away). Without this, the store
+// shows stale data because silentRefresh only fires on auth transitions.
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && useStore.getState().authenticated) {
+      useStore.getState().silentRefresh();
+    }
+  });
+}

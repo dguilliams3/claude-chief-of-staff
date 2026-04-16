@@ -43,4 +43,8 @@ export interface Session {
   createdAt: string;
   /** Token usage metadata — may be absent for sessions before token tracking */
   tokenUsage?: SessionTokenUsage;
+  /** Briefing type this session was last used for (e.g. "work", "news"), or null for chat-only sessions */
+  briefingType?: string | null;
+  /** ISO 8601 timestamp of the last briefing generated in this session */
+  briefingGeneratedAt?: string | null;
 }

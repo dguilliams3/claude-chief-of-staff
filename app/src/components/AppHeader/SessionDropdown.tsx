@@ -13,23 +13,23 @@
  * Do NOT: Fetch outside of open event — sessions are loaded lazily on dropdown open
  */
 
-import { useState, useEffect } from 'react';
-import { useStore } from '@/store';
-import { fetchSessions } from '@/domain/session/api';
-import type { Session } from '@/domain/session/types';
-import { formatTokens } from './AppHeader';
+import { useState, useEffect } from "react";
+import { useStore } from "@/store";
+import { fetchSessions } from "@/domain/session/api";
+import type { Session } from "@/domain/session/types";
+import { formatTokens } from "./AppHeader";
 
 /** Converts an ISO 8601 timestamp into compact relative time (e.g., "2h ago", "yesterday"). */
 function formatRelative(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return "—";
   const diff = Date.now() - new Date(iso).getTime();
-  if (diff < 0) return 'just now'; // Guard against future timestamps (clock skew)
+  if (diff < 0) return "just now"; // Guard against future timestamps (clock skew)
   const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return 'just now';
+  if (mins < 1) return "just now";
   if (mins < 60) return `${mins}m ago`;
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h ago`;
-  if (hours < 48) return 'yesterday';
+  if (hours < 48) return "yesterday";
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
 }
@@ -57,8 +57,8 @@ export function SessionDropdown({ onClose }: { onClose: () => void }) {
       .then((data) => {
         // Sort by lastUsedAt DESC — sessions with no usage float to bottom
         const sorted = [...data].sort((a, b) => {
-          const aTime = a.tokenUsage?.lastUsedAt ?? '';
-          const bTime = b.tokenUsage?.lastUsedAt ?? '';
+          const aTime = a.tokenUsage?.lastUsedAt ?? "";
+          const bTime = b.tokenUsage?.lastUsedAt ?? "";
           if (bTime > aTime) return 1;
           if (aTime > bTime) return -1;
           return a.id.localeCompare(b.id); // Stable tiebreak
@@ -66,20 +66,23 @@ export function SessionDropdown({ onClose }: { onClose: () => void }) {
         setSessions(sorted);
         setLoaded(true);
       })
-      .catch(() => { setLoadError(true); setLoaded(true); });
+      .catch(() => {
+        setLoadError(true);
+        setLoaded(true);
+      });
   }, []);
 
   function handleSelectNew() {
-    setSessionMode({ type: 'new' });
+    setSessionMode({ type: "new" });
     onClose();
   }
 
   function handleSelectSession(id: string) {
-    setSessionMode({ type: 'resume', sessionId: id });
+    setSessionMode({ type: "resume", sessionId: id });
     onClose();
   }
 
-  const isNewSelected = sessionMode.type === 'new';
+  const isNewSelected = sessionMode.type === "new";
 
   return (
     <div
@@ -97,39 +100,54 @@ export function SessionDropdown({ onClose }: { onClose: () => void }) {
           flex items-center justify-between w-full px-3 py-2 text-sm text-left
           hover:bg-surface-raised transition-colors
           border-b border-border-subtle
-          ${isNewSelected
-            ? 'border-l-2 border-accent text-accent bg-surface-raised'
-            : 'border-l-2 border-transparent text-accent'
+          ${
+            isNewSelected
+              ? "border-l-2 border-accent text-accent bg-surface-raised"
+              : "border-l-2 border-transparent text-accent"
           }
         `}
       >
         <span className="font-medium">✦ New Session</span>
         {isNewSelected && (
-          <span className="text-[10px] font-mono text-accent/60 uppercase tracking-wider">selected</span>
+          <span className="text-[10px] font-mono text-accent/60 uppercase tracking-wider">
+            selected
+          </span>
         )}
       </button>
 
       {/* Sessions list with scroll */}
-      <div className="overflow-y-auto" style={{ maxHeight: 'calc(5 * 2.5rem)' }}>
+      <div
+        className="overflow-y-auto"
+        style={{ maxHeight: "calc(5 * 2.5rem)" }}
+      >
         {loadError && (
-          <div className="px-3 py-2 text-xs text-muted italic">Failed to load sessions</div>
+          <div className="px-3 py-2 text-xs text-muted italic">
+            Failed to load sessions
+          </div>
         )}
         {!loaded && !loadError && (
           <div className="px-3 py-2 text-xs text-muted italic">Loading…</div>
         )}
         {loaded && !loadError && sessions.length === 0 && (
-          <div className="px-3 py-2 text-xs text-muted italic">No sessions yet</div>
+          <div className="px-3 py-2 text-xs text-muted italic">
+            No sessions yet
+          </div>
         )}
         {sessions.map((session) => {
-          const isSelected = sessionMode.type === 'resume' && sessionMode.sessionId === session.id;
+          const isSelected =
+            sessionMode.type === "resume" &&
+            sessionMode.sessionId === session.id;
           const tokenStr = session.tokenUsage
             ? formatTokens(session.tokenUsage.totalTokens)
-            : '—';
-          const timeStr = formatRelative(session.tokenUsage?.lastUsedAt ?? null);
-          // Show truncated session ID as label (last 8 chars for brevity)
-          const shortId = session.id.length > 12
-            ? `…${session.id.slice(-10)}`
-            : session.id;
+            : "—";
+          const timeStr = formatRelative(
+            session.tokenUsage?.lastUsedAt ?? null,
+          );
+          // Type label: Work/News for briefing sessions, Chat for chat-only
+          const typeLabel = session.briefingType
+            ? session.briefingType.charAt(0).toUpperCase() +
+              session.briefingType.slice(1)
+            : "Chat";
 
           return (
             <button
@@ -138,17 +156,24 @@ export function SessionDropdown({ onClose }: { onClose: () => void }) {
               className={`
                 flex items-center justify-between w-full px-3 py-2 text-sm text-left
                 hover:bg-surface-raised transition-colors
-                ${isSelected
-                  ? 'border-l-2 border-accent text-primary bg-surface-raised'
-                  : 'border-l-2 border-transparent text-primary'
+                ${
+                  isSelected
+                    ? "border-l-2 border-accent text-primary bg-surface-raised"
+                    : "border-l-2 border-transparent text-primary"
                 }
               `}
             >
-              <span className="font-mono text-[11px] text-muted truncate flex-1 mr-2">
-                {shortId}
+              <span className="flex items-center gap-1.5 truncate flex-1 mr-2">
+                <span className="font-mono text-[10px] text-accent/70 uppercase tracking-wider shrink-0">
+                  {typeLabel}
+                </span>
+                <span className="font-mono text-[10px] text-muted/50">·</span>
+                <span className="font-mono text-[10px] text-muted truncate">
+                  {timeStr}
+                </span>
               </span>
               <span className="font-mono text-[10px] text-muted/70 shrink-0 whitespace-nowrap">
-                {tokenStr} · {timeStr}
+                {tokenStr}
               </span>
             </button>
           );
