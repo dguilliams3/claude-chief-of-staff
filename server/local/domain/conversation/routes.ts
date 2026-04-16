@@ -22,6 +22,7 @@ import { fileURLToPath } from 'node:url';
 import { Hono } from 'hono';
 import { callClaude, buildClaudeArgs, ClaudeCliError } from '../../../../agent/claude-cli';
 import { logger } from '../../../../agent/logger';
+import { readLocalOverride } from '../../../../agent/local-config';
 import { enqueueFollowUp, completeFollowUp, failFollowUp, getFollowUpJob } from './followUpQueue';
 import { createBriefingTriggerRoutes } from '../briefing';
 import { parseCliUsage } from '../../../../agent/parse-cli-usage';
@@ -74,12 +75,27 @@ async function pushCompletionToWorker(job: {
   }
 }
 
-/** System prompt for new chat sessions — loaded once at startup. */
+/**
+ * Default chat system prompt — tracked, read once at startup.
+ * Per-instance operators can override via `local/chat-system-prompt.md`
+ * (gitignored); override is re-read live on every access so edits take
+ * effect without restart (fork win #2 — live getter pattern).
+ */
 const __currentDir = dirname(fileURLToPath(import.meta.url));
-const chatSystemPrompt = readFileSync(
+const defaultChatSystemPrompt = readFileSync(
   resolve(__currentDir, '../../../../agent/prompts/chat-system-prompt.md'),
   'utf-8',
 );
+
+/**
+ * Live getter for chat system prompt. Checks `local/chat-system-prompt.md`
+ * override on every call; falls back to tracked default if absent.
+ * Upstream: `POST /follow-up` in this file
+ * See also: `agent/local-config.ts::readLocalOverride`
+ */
+function getChatSystemPrompt(): string {
+  return readLocalOverride('chat-system-prompt.md') ?? defaultChatSystemPrompt;
+}
 
 /** Maximum allowed length for follow-up questions (characters). */
 const MAX_QUESTION_LENGTH = 10_000;
@@ -156,7 +172,7 @@ export function createClaudeRoutes() {
     // both new sessions and resumed sessions. The answer is in `result` field.
     Promise.resolve().then(async () => {
       const args = buildClaudeArgs({
-        system: newSession ? chatSystemPrompt : '',
+        system: newSession ? getChatSystemPrompt() : '',
         resumeId: newSession ? undefined : sessionId,
         outputFormat: 'json',
       });
