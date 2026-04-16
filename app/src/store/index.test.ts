@@ -59,9 +59,11 @@ vi.mock('@/lib/push', () => ({
 
 import { validateAuthToken } from '@/lib/api';
 import { fetchBriefings } from '@/domain/briefing';
+import { subscribeToPush } from '@/lib/push';
 
 const mockValidateAuthToken = vi.mocked(validateAuthToken);
 const mockFetchBriefings = vi.mocked(fetchBriefings);
+const mockSubscribeToPush = vi.mocked(subscribeToPush);
 
 // ---------- localStorage stub ----------
 
@@ -70,6 +72,7 @@ const storage = new Map<string, string>();
 beforeEach(() => {
   vi.clearAllMocks();
   storage.clear();
+  mockSubscribeToPush.mockResolvedValue(false);
   vi.stubGlobal('localStorage', {
     getItem: (key: string) => storage.get(key) ?? null,
     setItem: (key: string, val: string) => storage.set(key, val),
@@ -100,5 +103,25 @@ describe('subscribe hydration', () => {
 
     // The subscribe callback should have called silentRefresh → fetchBriefings
     expect(mockFetchBriefings).toHaveBeenCalled();
+  });
+
+  it('calls silentRefresh on visibilitychange when visible and authenticated', async () => {
+    const documentStub = {
+      hidden: true,
+      addEventListener: vi.fn(),
+    };
+    vi.stubGlobal('document', documentStub);
+
+    const { useStore } = await import('./index');
+    const silentRefresh = vi.fn();
+    useStore.setState({ authenticated: true, silentRefresh } as never);
+    const callsBeforeVisibility = silentRefresh.mock.calls.length;
+
+    documentStub.hidden = false;
+    const visibilityHandler = documentStub.addEventListener.mock.calls[0]?.[1] as (() => void) | undefined;
+    visibilityHandler?.();
+
+    expect(documentStub.addEventListener).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
+    expect(silentRefresh).toHaveBeenCalledTimes(callsBeforeVisibility + 1);
   });
 });
