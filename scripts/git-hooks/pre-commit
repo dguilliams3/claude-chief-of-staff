@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#
+# Tracked pre-commit hook for claude-chief-of-staff.
+# Enable with: git config core.hooksPath scripts/git-hooks
+#
+# Runs depersonalization check against staged files. Blocks commit if any
+# staged file contains canonical personal literals (Dan / Astral / real D1 UUID).
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+"$REPO_ROOT/scripts/check-depersonalization.sh"
