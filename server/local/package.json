@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "tsx server.ts"
+    "start": "tsx server.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.11",
@@ -14,6 +15,7 @@
     "pino": "^10.3.1"
   },
   "devDependencies": {
-    "tsx": "^4.21.0"
+    "tsx": "^4.21.0",
+    "vitest": "^4.1.0"
   }
 }

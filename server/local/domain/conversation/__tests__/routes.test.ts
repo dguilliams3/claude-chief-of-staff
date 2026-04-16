@@ -44,6 +44,10 @@ vi.mock('../followUpQueue', () => ({
   completeFollowUp: vi.fn(),
   failFollowUp: vi.fn(),
   getFollowUpJob: vi.fn(() => null),
+  // Added 2026-04-16 when rate-limit middleware (c36c3dc) wired
+  // getActiveFollowUpCount into createFollowUpRateLimit(). Test was orphaned
+  // from CI until RUN-20260416-1757 Phase C fix caught the stale mock.
+  getActiveFollowUpCount: vi.fn(() => 0),
 }));
 
 vi.mock('../../briefing', () => ({
