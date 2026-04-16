@@ -8,25 +8,26 @@
  * Used by: `agent/cli.ts` (direct), `server/local/domain/briefing/routes.ts` (HTTP trigger)
  * See also: `agent/registry.ts` — type configs, `agent/claude-cli.ts` — CLI wrapper
  */
-import { randomUUID } from 'node:crypto';
-import { writeFileSync, mkdirSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { logger } from './logger';
-import { compile } from './prompts/compile';
-import { briefingTypes, validTypes } from './registry';
-import { buildClaudeArgs, callClaude, ClaudeCliError } from './claude-cli';
-import { extractJson } from './extract-json';
-import { ClaudeJsonEnvelope } from './schemas';
-import { parseSections } from './parse-sections';
-import { readSessions, updateSession } from './sessions';
-import { syncToD1 } from './sync';
-import { parseCliUsage } from './parse-cli-usage';
-import type { CliUsage } from './parse-cli-usage';
+import { randomUUID } from "node:crypto";
+import { writeFileSync, mkdirSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { logger } from "./logger";
+import { compile } from "./prompts/compile";
+import { briefingTypes, validTypes } from "./registry";
+import { buildClaudeArgs, callClaude, ClaudeCliError } from "./claude-cli";
+import { extractJson } from "./extract-json";
+import { ClaudeJsonEnvelope } from "./schemas";
+import { parseSections } from "./parse-sections";
+import { extractAssistantTexts } from "./session-jsonl";
+import { readSessions, updateSession } from "./sessions";
+import { syncToD1 } from "./sync";
+import { parseCliUsage } from "./parse-cli-usage";
+import type { CliUsage } from "./parse-cli-usage";
 
 const AGENT_DIR = dirname(fileURLToPath(import.meta.url));
-const BRIEFINGS_DIR = resolve(AGENT_DIR, 'briefings');
-const SESSIONS_FILE = resolve(AGENT_DIR, 'sessions.json');
+const BRIEFINGS_DIR = resolve(AGENT_DIR, "briefings");
+const SESSIONS_FILE = resolve(AGENT_DIR, "sessions.json");
 
 export interface RunBriefingOptions {
   type: string;
@@ -67,13 +68,20 @@ export interface BriefingResult {
  * @param opts.resumeSessionId - If provided, resumes this session directly (skips sessions.json lookup)
  * @returns Complete BriefingResult with sections, metadata, and session info
  */
-export async function runBriefing({ type, newSession = false, model, resumeSessionId }: RunBriefingOptions): Promise<BriefingResult> {
+export async function runBriefing({
+  type,
+  newSession = false,
+  model,
+  resumeSessionId,
+}: RunBriefingOptions): Promise<BriefingResult> {
   if (!validTypes.includes(type)) {
-    throw new Error(`Invalid briefing type "${type}". Valid: ${validTypes.join(', ')}`);
+    throw new Error(
+      `Invalid briefing type "${type}". Valid: ${validTypes.join(", ")}`,
+    );
   }
 
   const config = briefingTypes[type];
-  logger.info({ type, newSession, resumeSessionId }, 'Starting briefing');
+  logger.info({ type, newSession, resumeSessionId }, "Starting briefing");
 
   // Session lookup: explicit resumeSessionId takes precedence over sessions.json lookup.
   // When resumeSessionId is provided (e.g. from PWA trigger), skip the file lookup entirely.
@@ -88,27 +96,46 @@ export async function runBriefing({ type, newSession = false, model, resumeSessi
 
   // Compile prompts
   const { system, user } = compile({ prompt: config.prompt });
-  logger.info({ systemLen: system.length, userLen: user.length }, 'Prompts compiled');
+  logger.info(
+    { systemLen: system.length, userLen: user.length },
+    "Prompts compiled",
+  );
 
   // Build args and invoke Claude
   const args = buildClaudeArgs({
     system,
     resumeId,
     model,
-    outputFormat: 'json',
+    outputFormat: "json",
   });
 
   const startMs = Date.now();
   let response: string;
   let actuallyResumed = !!resumeId;
   try {
-    response = await callClaude({ args, input: user, timeoutMs: config.timeoutMs });
+    response = await callClaude({
+      args,
+      input: user,
+      timeoutMs: config.timeoutMs,
+    });
   } catch (err) {
     // Auto-retry on expired session: start a fresh session and try once more
-    if (err instanceof ClaudeCliError && err.code === 'SESSION_EXPIRED' && resumeId) {
-      logger.warn({ type }, 'Session expired, retrying with fresh session');
-      const freshArgs = buildClaudeArgs({ system, model, outputFormat: 'json' });
-      response = await callClaude({ args: freshArgs, input: user, timeoutMs: config.timeoutMs });
+    if (
+      err instanceof ClaudeCliError &&
+      err.code === "SESSION_EXPIRED" &&
+      resumeId
+    ) {
+      logger.warn({ type }, "Session expired, retrying with fresh session");
+      const freshArgs = buildClaudeArgs({
+        system,
+        model,
+        outputFormat: "json",
+      });
+      response = await callClaude({
+        args: freshArgs,
+        input: user,
+        timeoutMs: config.timeoutMs,
+      });
       actuallyResumed = false;
     } else {
       throw err;
@@ -119,15 +146,67 @@ export async function runBriefing({ type, newSession = false, model, resumeSessi
   // Parse token usage from raw JSON (before extractJson strips the envelope)
   const usage = parseCliUsage(response);
   if (usage) {
-    logger.info({ totalTokens: usage.totalTokens, contextWindow: usage.contextWindow, costUsd: usage.costUsd }, 'Token usage parsed');
+    logger.info(
+      {
+        totalTokens: usage.totalTokens,
+        contextWindow: usage.contextWindow,
+        costUsd: usage.costUsd,
+      },
+      "Token usage parsed",
+    );
   }
 
   // Parse and validate Claude JSON response
   const parsed = ClaudeJsonEnvelope.parse(JSON.parse(extractJson(response)));
 
-  // Parse sections from result
-  const sections = parseSections(parsed.result);
-  logger.info({ sectionCount: sections.length }, 'Sections parsed');
+  // Parse sections from result. Multi-turn tool-use sessions may produce the JSON
+  // in a middle turn, with follow-up confirmations as the final turn that --print
+  // returns. Three-level fallback: result field → full stdout → session JSONL.
+  // Empty arrays from the first two strategies are treated as failures — a valid
+  // briefing always has at least one section.
+  let sections: unknown[] = [];
+
+  try {
+    sections = parseSections(parsed.result);
+  } catch {
+    logger.warn("parseSections failed on result field, trying full response");
+  }
+
+  if (sections.length === 0) {
+    try {
+      const fromResponse = parseSections(response);
+      if (fromResponse.length > 0) sections = fromResponse;
+    } catch {
+      // fall through to JSONL
+    }
+  }
+
+  if (sections.length === 0) {
+    logger.warn("No sections from stdout, trying session JSONL");
+    const texts = extractAssistantTexts(parsed.session_id);
+    for (const text of texts) {
+      try {
+        const fromJsonl = parseSections(text);
+        if (fromJsonl.length > 0) {
+          sections = fromJsonl;
+          logger.info(
+            { source: "session-jsonl", count: fromJsonl.length },
+            "Sections extracted from JSONL",
+          );
+          break;
+        }
+      } catch {
+        // Not this message, try next
+      }
+    }
+    if (sections.length === 0) {
+      logger.error(
+        { sessionId: parsed.session_id },
+        "No sections found in any source",
+      );
+    }
+  }
+  logger.info({ sectionCount: sections.length }, "Sections parsed");
 
   // Update session (tracks whether the final call actually resumed or started fresh)
   const resumed = actuallyResumed;
@@ -158,10 +237,10 @@ export async function runBriefing({ type, newSession = false, model, resumeSessi
   // Write to file
   mkdirSync(BRIEFINGS_DIR, { recursive: true });
   // Include seconds + briefing ID to prevent filename collision within the same minute
-  const filename = `${new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')}-${type}-${briefing.id.slice(0, 8)}.json`;
+  const filename = `${new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-")}-${type}-${briefing.id.slice(0, 8)}.json`;
   const filePath = resolve(BRIEFINGS_DIR, filename);
-  writeFileSync(filePath, JSON.stringify(briefing, null, 2), 'utf-8');
-  logger.info({ filePath, durationMs }, 'Briefing written');
+  writeFileSync(filePath, JSON.stringify(briefing, null, 2), "utf-8");
+  logger.info({ filePath, durationMs }, "Briefing written");
 
   // Sync to D1 (non-fatal)
   await syncToD1({ briefing });
