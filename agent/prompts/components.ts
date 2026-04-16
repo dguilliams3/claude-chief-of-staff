@@ -7,8 +7,8 @@
  * Used by: `agent/briefings/work/config.ts`, `agent/briefings/news/config.ts`
  * See also: `agent/prompts/types.ts` — PromptComponent / ComponentKind definitions
  */
-import type { PromptComponent } from './types';
-import { readLocalOverride } from '../local-config';
+import type { PromptComponent } from "./types";
+import { readLocalOverride } from "../local-config";
 
 const defaultPersonaContent = `You are an AI briefing assistant — your user's operational intelligence system.
 
@@ -31,15 +31,17 @@ Rules:
  * without restarting the server (relevant for PWA-triggered briefings).
  */
 export const persona: PromptComponent = {
-  kind: 'persona',
-  name: 'briefing-assistant',
-  get content() { return readLocalOverride('persona.md') ?? defaultPersonaContent; },
+  kind: "persona",
+  name: "briefing-assistant",
+  get content() {
+    return readLocalOverride("persona.md") ?? defaultPersonaContent;
+  },
 };
 
 /** Available data sources (MCP tools, web). */
 export const standardSources: PromptComponent = {
-  kind: 'sources',
-  name: 'available-sources',
+  kind: "sources",
+  name: "available-sources",
   content: `You have access to the following — use what's relevant, not necessarily everything:
 
 - **Jira** (MCP) — open/in-progress issues across all visible projects
@@ -52,24 +54,36 @@ export const standardSources: PromptComponent = {
 Not all sources may be configured. If a source is unavailable or errors out, note it and continue with what you have.`,
 };
 
-/** Guidance on when/how to use subagents for data gathering. */
+/** Default subagent-strategy content — tracked. Can be overridden per-instance
+ * via `local/subagent-guide.md` (gitignored). */
+const defaultSubagentGuideContent = `ALL data gathering MUST happen via Sonnet subagents, not in the main thread. Do not call MCP tools (Jira, Fireflies, MS365, etc.) directly — always dispatch subagents to do it. Use model: "sonnet" when spawning them. This keeps the main synthesis context clean and fast.
+
+Launch subagents in parallel when sources are independent (Jira and Fireflies don't depend on each other). Use sequential subagents only when results from one step inform the next (e.g., recent client names tell you what to search in Teams messages).
+
+Each subagent should return a structured summary, not raw API dumps. The main thread's job is synthesis — assembling subagent findings into the final briefing JSON. It should never see 100+ raw tickets or full transcript text.`;
+
+/**
+ * Guidance on when/how to use subagents for data gathering — mandates Sonnet
+ * subagents for all MCP data gathering (not a suggestion).
+ *
+ * Per-instance operators can override the full text via
+ * `local/subagent-guide.md` (gitignored). Re-read on every access via getter,
+ * matching the persona/focus pattern — edits take effect without restart.
+ */
 export const subagentGuide: PromptComponent = {
-  kind: 'subagent-guide',
-  name: 'subagent-strategy',
-  content: `Intelligently use subagents for data gathering. Don't default to one subagent per source — think about what actually benefits from parallelism vs. what needs to be sequential.
-
-Parallel when: sources are independent (Jira and Fireflies don't depend on each other).
-Sequential when: results from one step inform the next (e.g., recent client interactions tell you what to web search about, or Jira ticket keys tell you what to look for in meetings).
-
-Each subagent should return a structured summary, not raw API dumps. The main synthesis context should stay clean — it sees summaries, not 100+ raw tickets or full transcript text.
-
-You don't have to use subagents. For small, fast queries, just do it inline. Use subagents when there's enough data that raw responses would pollute the synthesis context.`,
+  kind: "subagent-guide",
+  name: "subagent-strategy",
+  get content() {
+    return (
+      readLocalOverride("subagent-guide.md") ?? defaultSubagentGuideContent
+    );
+  },
 };
 
 /** Directive: trust meetings/git over Jira; flag discrepancies. */
 export const skepticism: PromptComponent = {
-  kind: 'directive',
-  name: 'skepticism',
+  kind: "directive",
+  name: "skepticism",
   content: `Jira is often stale. People update tickets inconsistently. Treat meetings, git activity, and other live sources as higher signal for what is actually happening. If Jira and reality disagree, trust reality and flag the gap.
 
 Do not assume a ticket is actively being worked just because its status says "In Progress." Look for corroborating evidence in meetings or git history.`,
@@ -77,8 +91,8 @@ Do not assume a ticket is actively being worked just because its status says "In
 
 /** Directive: bias toward last 7 days; old data is context, not content. */
 export const recencyBias: PromptComponent = {
-  kind: 'directive',
-  name: 'recency-bias',
+  kind: "directive",
+  name: "recency-bias",
   content: `Bias heavily toward the last 7 days. Old data is context, not content. If a project,
 ticket, or client hasn't had activity in 2+ weeks, it gets a one-liner at most — not a section.
 
@@ -88,15 +102,15 @@ current. Don't inventory the graveyard. Focus on what's alive.`,
 
 /** Directive: on session resume, highlight deltas only. */
 export const sessionContinuity: PromptComponent = {
-  kind: 'directive',
-  name: 'session-continuity',
+  kind: "directive",
+  name: "session-continuity",
   content: `When resuming a session: focus on what changed since the last briefing. Do not repeat findings that haven't changed. Highlight deltas.`,
 };
 
 /** Output format: raw JSON array of section objects with severity levels. */
 export const jsonSections: PromptComponent = {
-  kind: 'output',
-  name: 'json-output',
+  kind: "output",
+  name: "json-output",
   content: `Output ONLY a raw JSON array of section objects. No markdown fences. No preamble. No trailing commentary. No explanation. Just valid JSON.
 
 Each section object: { "key": "SECTION_KEY", "label": "Human-Readable Label", "content": "Markdown string", "severity": "info|warn|flag" }
