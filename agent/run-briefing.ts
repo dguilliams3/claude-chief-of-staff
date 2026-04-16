@@ -24,6 +24,8 @@ import { readSessions, updateSession } from "./sessions";
 import { syncToD1 } from "./sync";
 import { parseCliUsage } from "./parse-cli-usage";
 import type { CliUsage } from "./parse-cli-usage";
+import { fetchAllSources, serializeFeedItems } from "./feeds/index";
+import { readLocalFeeds } from "./local-config";
 
 const AGENT_DIR = dirname(fileURLToPath(import.meta.url));
 const BRIEFINGS_DIR = resolve(AGENT_DIR, "briefings");
@@ -96,8 +98,20 @@ export async function runBriefing({
 
   // Compile prompts
   const { system, user } = compile({ prompt: config.prompt });
+  let finalUser = user;
+
+  if (type === "community") {
+    const configuredFeeds = readLocalFeeds();
+    if (configuredFeeds.length > 0) {
+      const feedItems = await fetchAllSources(configuredFeeds);
+      logger.info({ feedItemCount: feedItems.length }, "Feed items fetched");
+      finalUser = `${user}\n\n## Feed Data\n\n${serializeFeedItems(feedItems)}`;
+    } else {
+      logger.info("No local feeds configured; community briefing will run without feed data");
+    }
+  }
   logger.info(
-    { systemLen: system.length, userLen: user.length },
+    { systemLen: system.length, userLen: finalUser.length },
     "Prompts compiled",
   );
 
@@ -115,7 +129,7 @@ export async function runBriefing({
   try {
     response = await callClaude({
       args,
-      input: user,
+      input: finalUser,
       timeoutMs: config.timeoutMs,
     });
   } catch (err) {
@@ -133,7 +147,7 @@ export async function runBriefing({
       });
       response = await callClaude({
         args: freshArgs,
-        input: user,
+        input: finalUser,
         timeoutMs: config.timeoutMs,
       });
       actuallyResumed = false;
