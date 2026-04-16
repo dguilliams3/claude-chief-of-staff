@@ -100,6 +100,25 @@ interface ChatsSliceDeps {
 type StoreGet = () => ConversationSlice & ChatsSliceDeps;
 type StoreSet = (partial: Partial<ConversationSlice & ChatsSliceDeps>) => void;
 
+/**
+ * Syncs followUpHistory changes to selectedConversationMessages when the
+ * currently-selected conversation matches the mutation context.
+ */
+function syncSelectedMessages(
+  messages: Message[],
+  context: { briefingId?: string; conversationId?: string },
+  store: { get: StoreGet; set: StoreSet },
+): void {
+  const selected = store.get().selectedConversation;
+  if (!selected) return;
+  if (
+    (context.conversationId && selected.id === context.conversationId) ||
+    (context.briefingId && selected.briefingId === context.briefingId)
+  ) {
+    store.set({ selectedConversationMessages: messages });
+  }
+}
+
 /** Remove a pending entry by historyKey, returning the updated record for set(). */
 function clearPending(
   get: () => { pendingFollowUps: Record<string, PendingFollowUp> },
@@ -157,16 +176,8 @@ function deliverFollowUpResponse(
     set({ briefingConversations: assignConversationName(get().briefingConversations, conversationId, job.chatName) });
   }
 
-  // Sync selectedConversationMessages for ConversationDetail.
-  // selectedConversation and selectedConversationMessages are ChatsSlice fields
-  // included in StoreGet/StoreSet via ChatsSliceDeps — no cast needed.
-  const selectedConversation = get().selectedConversation;
-  if (selectedConversation && (
-    (briefingId && selectedConversation.briefingId === briefingId) ||
-    (conversationId && selectedConversation.id === conversationId)
-  )) {
-    set({ selectedConversationMessages: withAssistant });
-  }
+  // Sync to ConversationDetail (selectedConversationMessages)
+  syncSelectedMessages(withAssistant, { briefingId, conversationId }, { get, set });
 }
 
 /**
@@ -181,10 +192,16 @@ function deliverFollowUpResponse(
  */
 function handleFollowUpError(
   error: unknown,
-  context: { historyKey: string; tempId: string; effectiveSessionId?: string },
+  context: {
+    historyKey: string;
+    tempId: string;
+    effectiveSessionId?: string;
+    briefingId?: string;
+    conversationId?: string;
+  },
   store: { get: StoreGet; set: StoreSet },
 ): void {
-  const { historyKey, tempId, effectiveSessionId } = context;
+  const { historyKey, tempId, effectiveSessionId, briefingId, conversationId } = context;
   const { get, set } = store;
 
   if (error instanceof FollowUpError) {
@@ -198,9 +215,11 @@ function handleFollowUpError(
           : m
       );
       set({ followUpHistory: { ...get().followUpHistory, [historyKey]: updated } });
+      syncSelectedMessages(updated, { briefingId, conversationId }, store);
     } else if (!error.persisted) {
       const updated = current.filter(m => m.id !== tempId);
       set({ followUpHistory: { ...get().followUpHistory, [historyKey]: updated } });
+      syncSelectedMessages(updated, { briefingId, conversationId }, store);
     }
 
     if (error.sessionExpired) {
@@ -327,6 +346,13 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
         followUpError: null,
       });
 
+      // Sync optimistic message to ConversationDetail
+      syncSelectedMessages(
+        [...history, optimisticMessage],
+        { briefingId, conversationId },
+        { get, set },
+      );
+
       // Stop any existing poll for this same history key (prevents double-poll on rapid sends)
       stopPolling(historyKey);
 
@@ -345,6 +371,7 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
               : m
           );
           set({ followUpHistory: { ...get().followUpHistory, [historyKey]: updated } });
+          syncSelectedMessages(updated, { briefingId, conversationId }, { get, set });
         }
 
         // 4. Start adaptive polling for the response
@@ -368,6 +395,7 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
                       followUpHistory: { ...get().followUpHistory, [historyKey]: msgs },
                       ...clearPending(get, historyKey),
                     });
+                    syncSelectedMessages(msgs, { briefingId, conversationId }, { get, set });
                   } else {
                     set({
                       followUpError: 'Response timed out. Claude may still be working — check back later.',
@@ -404,7 +432,11 @@ export function createConversationSlice(set: StoreSet, get: StoreGet): Conversat
         );
 
       } catch (error) {
-        handleFollowUpError(error, { historyKey, tempId, effectiveSessionId }, { get, set });
+        handleFollowUpError(
+          error,
+          { historyKey, tempId, effectiveSessionId, briefingId, conversationId },
+          { get, set },
+        );
       }
     },
 
