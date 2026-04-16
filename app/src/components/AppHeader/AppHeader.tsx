@@ -5,6 +5,7 @@ import { useRelativeTime } from "@/hooks/useRelativeTime";
 import { SessionDropdown } from "./SessionDropdown";
 import { generateAndDownloadPdf } from "@/lib/export";
 import { subscribeToPush, getPushPermissionState } from "@/lib/push";
+import { toast } from "@/lib/toast";
 
 /**
  * Fallback type labels used when the server hasn't yet provided metadata
@@ -64,7 +65,26 @@ export function AppHeader() {
 
   async function handleEnablePush() {
     const success = await subscribeToPush({ userGesture: true });
-    setPushState(success ? "subscribed" : getPushPermissionState());
+    if (success) {
+      setPushState("subscribed");
+      return;
+    }
+    const permState = getPushPermissionState();
+    // Bell retry UX (Codex HIGH finding, RUN-20260416-1757):
+    // If the user granted permission but the subscribe flow failed (VAPID
+    // fetch error, subscribe API 5xx, network hiccup), `Notification.permission`
+    // is "granted" and the Bell would hide — creating a silent dead-end
+    // where the user thinks they enabled push but nothing works and there's
+    // no retry affordance. Two mitigations:
+    //   (a) surface a toast so the user knows the subscribe failed
+    //   (b) keep the Bell visible by forcing "default" when permission was
+    //       granted but subscription did not register
+    if (permState === "granted") {
+      toast("Push subscription failed — tap the bell to retry", "error");
+      setPushState("default");
+      return;
+    }
+    setPushState(permState);
   }
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
