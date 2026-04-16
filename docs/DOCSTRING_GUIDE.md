@@ -1,4 +1,4 @@
-# claude-assistant Docstring & Comment Guide
+# Docstring & Comment Guide
 
 > Code is Context. Docstrings are the primary interface for AI-assisted development — they survive context compaction, power cross-project synthesis, and create a machine-parseable dependency graph. Verbosity is intentional and non-negotiable. Docstrings do NOT count toward file line limits.
 
