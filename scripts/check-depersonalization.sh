@@ -37,7 +37,7 @@ WHITELIST=(
 )
 
 # Regex union of forbidden patterns.
-FORBIDDEN='Dan Guilliams|Astral Insights|danguilliams\.com|5ec470d1-cb13-4775-93ec-7d68bd41c7aa'
+FORBIDDEN='Dan Guilliams|Astral Insights|danguilliams\.com|5ec470d1-cb13-4775-93ec-7d68bd41c7aa|\bDAN_[A-Z_]+|Guilliams'
 
 # Files staged for commit (added, copied, modified, renamed). Exclude deletes.
 staged_files=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null || true)
