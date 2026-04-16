@@ -15,6 +15,7 @@ import { TodayView } from "@/views/TodayView";
 import { HistoryView } from "@/views/HistoryView";
 import { ChatsView } from "@/views/ChatsView";
 import { LoginScreen } from "@/views/LoginScreen";
+import { ToastContainer } from "@/components/Toast/Toast";
 
 /**
  * Root component that gates on authentication state.
@@ -73,6 +74,7 @@ function AppShell() {
           <ChatsView />
         </div>
       )}
+      <ToastContainer />
     </div>
   );
 }

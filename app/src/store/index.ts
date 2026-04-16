@@ -21,9 +21,11 @@ import {
   type ConversationSlice,
 } from "./conversationSlice";
 import { createChatsSlice, type ChatsSlice } from "./chatsSlice";
+import { createToastSlice, type ToastSlice } from "./toastSlice";
+import { setToastFn } from "@/lib/toast";
 
 interface CosStore
-  extends AuthSlice, BriefingSlice, ConversationSlice, ChatsSlice {
+  extends AuthSlice, BriefingSlice, ConversationSlice, ChatsSlice, ToastSlice {
   // View routing
   view: "today" | "history" | "chats";
   setView: (options: { view: "today" | "history" | "chats" }) => void;
@@ -76,8 +78,20 @@ export const useStore = create<CosStore>((set, get) => {
       (partial) => set(partial as Partial<CosStore>),
       () => get() as ChatsSlice,
     ),
+
+    // Toast slice — transient user-facing notifications
+    ...createToastSlice(
+      (partial) => set(partial as Partial<CosStore>),
+      () => get() as ToastSlice,
+    ),
   };
 });
+
+// Wire the standalone toast helper so non-React callers (API modules, slices)
+// can surface errors without importing the store directly.
+setToastFn((message, severity) =>
+  useStore.getState().addToast(message, severity),
+);
 
 // Hydrate briefings when auth transitions to authenticated.
 // This decouples auth validation from briefing fetching — auth validates via
