@@ -35,6 +35,24 @@
             "command": "python \"$(git rev-parse --show-toplevel)/.claude/hooks/block-destructive-git.py\""
           }
         ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$(git rev-parse --show-toplevel)/.claude/hooks/spec-quality-gate.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$(git rev-parse --show-toplevel)/.claude/hooks/spec-quality-gate.py\""
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
