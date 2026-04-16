@@ -380,27 +380,86 @@ _Goal: Tailor briefing prompts to the user's work and interests. All customizati
    - Write the focus instructions to `local/briefings/news-focus.md`.
    - **If file already exists:** Show current content, ask before overwriting.
 
-6. **General focus context** (optional) — ask:
+6. **Community briefing feeds** (optional — only if the user wants a
+   community digest):
+
+   Community briefings pull items from RSS/GraphQL feeds the user configures.
+   They ship with NO default feeds — each instance selects its own from the
+   suggestion catalog at `agent/feeds/template-sources.ts` or defines custom.
+
+   Ask: "Do you want a Community briefing? It digests items from RSS / GraphQL
+   feeds you configure. Common use cases include tracking research papers,
+   industry newsletters, or niche community forums."
+
+   If **no**: skip this step. (The Community tab still appears in the UI
+   because the type is registered, but the briefing will run with zero
+   items until feeds are configured.)
+
+   If **yes**:
+
+   - Open `agent/feeds/template-sources.ts` and walk through the suggestion
+     categories (finance, science, biotech, geopolitics, rationalism/AI,
+     custom RSS). Ask which categories the user wants.
+
+   - For each selected category, show the example URL(s) from the catalog
+     and ask: "Use this source, pick a different URL, or skip?"
+
+   - The user can also define fully custom feeds at this step — ask for:
+     - `id` (short unique slug)
+     - `name` (human-readable)
+     - `kind` ("rss" or "graphql")
+     - `url` (RSS URL) OR GraphQL endpoint + query
+
+   - Write the selected feeds to `local/feeds.json` as an array matching the
+     `FeedSource[]` shape (see `agent/feeds/types.ts`). Example:
+
+     ```json
+     [
+       {
+         "id": "nature-news",
+         "name": "Nature News",
+         "kind": "rss",
+         "url": "https://www.nature.com/nature.rss"
+       },
+       {
+         "id": "custom-feed-1",
+         "name": "My team's RSS",
+         "kind": "rss",
+         "url": "https://example.com/feed.xml"
+       }
+     ]
+     ```
+
+   - **If `local/feeds.json` already exists:** show current entries, ask
+     whether to add/replace/keep.
+
+   - Optional: write `local/briefings/community-focus.md` with any
+     per-topic guidance ("prioritize engineering papers", "skip op-eds",
+     etc.) — the community prompt consumes this via `readLocalOverride`.
+
+7. **General focus context** (optional) — ask:
    - "Is there anything that should apply to ALL briefing types? Company context, current priorities, things to always watch for?"
    - If yes: write to `local/briefing-focus.md`.
    - If no: skip (no file created).
 
-7. Run a test briefing to show the output:
+8. Run a test briefing to show the output:
    ```
    npx tsx agent/cli.ts work --new-session
    ```
 
-8. Ask: "How does this look? Want to adjust anything?"
+9. Ask: "How does this look? Want to adjust anything?"
 
-9. Iterate if needed. Edit the relevant `local/` file and re-run test briefings.
+10. Iterate if needed. Edit the relevant `local/` file and re-run test briefings.
 
-10. Append to `setup-run/setup-log.md`:
+11. Append to `setup-run/setup-log.md`:
 
 ```markdown
 ## Phase 7: Prompt Customization
 - Persona written: local/persona.md
 - Work focus written: local/briefings/work-focus.md
 - News focus written: local/briefings/news-focus.md
+- Community feeds: local/feeds.json (or "skipped")
+- Community focus: local/briefings/community-focus.md (or "skipped")
 - General focus: local/briefing-focus.md (or "skipped")
 - Test briefing approved: yes/no
 ```
