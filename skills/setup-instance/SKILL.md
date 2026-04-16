@@ -129,7 +129,19 @@ _Goal: Create D1 database, configure Worker, set secrets._
    Capture the `database_id` from output.
 
 4. Edit `server/worker/wrangler.toml`:
-   - Set the `database_id` field under `[[d1_databases]]` to the captured value.
+   - Set the `name` field to your chosen `<WORKER_NAME>` (from Phase 0).
+   - Set the `database_name` and `database_id` fields under `[[d1_databases]]` to
+     your `<D1_DATABASE_NAME>` and the captured `database_id`.
+   - **R2 (optional — skip if your Cloudflare account doesn't support R2):**
+     The `[[r2_buckets]]` block is commented out by default. If you want
+     briefing export storage, uncomment it and set `bucket_name` to your
+     `<R2_BUCKET_NAME>` (from Phase 0). Verify R2 availability first:
+     ```
+     wrangler r2 bucket list
+     ```
+     If you get a "billing required" or "not enabled" error, leave
+     `[[r2_buckets]]` commented out — the Worker will still deploy
+     cleanly, exports feature just stays disabled.
 
 5. Apply D1 migrations:
    ```
@@ -230,27 +242,33 @@ _Goal: Connect Claude Code to the user's selected data sources via MCP._
 
 1. Read `setup-run/setup-log.md` for data source selections from Phase 0.
 
-2. For each selected data source, run the appropriate command:
+2. Read SSE endpoints from `skills/setup-instance/mcp-servers.json` (single
+   source of truth for MCP provider URLs — edit that file when a provider
+   rotates endpoints; don't inline URLs in this skill).
 
-   - **Jira:**
-     ```
-     claude mcp add atlassian -- npx -y @anthropic-ai/mcp-remote@latest https://mcp.atlassian.com/v1/sse
-     ```
+   For each selected data source in Phase 0, run:
 
-   - **Fireflies:**
-     ```
-     claude mcp add fireflies -- npx -y @anthropic-ai/mcp-remote@latest https://mcp.fireflies.ai/sse
-     ```
+   ```
+   claude mcp add <cliName> -- npx -y @anthropic-ai/mcp-remote@latest <sseUrl>
+   ```
 
-   - **MS365:**
-     ```
-     claude mcp add ms365 -- npx -y @anthropic-ai/mcp-remote@latest https://mcp.ms365.com/sse
-     ```
+   where `<cliName>` and `<sseUrl>` come from the corresponding entry in
+   `mcp-servers.json`. Available entries at time of this skill version:
 
-   - **Custom:** Ask the user for the MCP server name and URL, then:
+   - **Jira / Confluence (Atlassian):** `atlassian` → `https://mcp.atlassian.com/v1/sse`
+   - **Fireflies:** `fireflies` → `https://mcp.fireflies.ai/sse`
+   - **MS365:** `ms365` → `https://mcp.ms365.com/sse`
+
+   **Verify first:** before running `claude mcp add <cliName>`, run
+   `claude mcp list` and skip the add if the server is already present
+   (rerunning `mcp add` on an existing name errors out).
+
+   - **Custom (not in registry):** Ask the user for a name and URL, then:
      ```
      claude mcp add <name> -- npx -y @anthropic-ai/mcp-remote@latest <url>
      ```
+     Consider adding the new server to `mcp-servers.json` if it's generally
+     useful for fork users — submit a doc PR.
 
 3. Each `mcp add` command will trigger an OAuth flow in the browser. Guide the user:
    > A browser window will open for authentication. Log in and authorize access, then return here.

@@ -1,0 +1,24 @@
+{
+  "$schema": "./mcp-servers.schema.json",
+  "_description": "Registry of SSE URLs for MCP servers offered during setup-instance Phase 4. Edit a single entry here when a provider rotates their endpoint rather than hunting down hardcoded URLs in SKILL.md.",
+  "servers": {
+    "atlassian": {
+      "label": "Jira / Confluence (Atlassian)",
+      "cliName": "atlassian",
+      "sseUrl": "https://mcp.atlassian.com/v1/sse",
+      "description": "Project tracking, issues, Confluence pages. OAuth via Atlassian account."
+    },
+    "fireflies": {
+      "label": "Fireflies",
+      "cliName": "fireflies",
+      "sseUrl": "https://mcp.fireflies.ai/sse",
+      "description": "Meeting transcripts. OAuth via Fireflies account."
+    },
+    "ms365": {
+      "label": "Microsoft 365 (email, calendar, Teams)",
+      "cliName": "ms365",
+      "sseUrl": "https://mcp.ms365.com/sse",
+      "description": "Outlook mail, calendar events, Teams messages. OAuth via Microsoft account."
+    }
+  }
+}
