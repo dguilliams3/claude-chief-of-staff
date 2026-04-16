@@ -60,7 +60,7 @@ RUN-YYYYMMDD-HHMM-<slug>/
     ├── README.md                   # Member roster + process overview
     ├── PRE-SYNTHESIS.md            # Team-only synthesis (before independent reveal, if applicable)
     ├── POST-SYNTHESIS.md           # Final synthesis (all perspectives integrated)
-    ├── DAN_DISCUSSION.md           # Append-only post-council discussion with Dan
+    ├── OPERATOR_DISCUSSION.md           # Append-only post-council discussion with the user
     │
     ├── <role-slug>/
     │   ├── SPEC.md                 # Role-specific mission, data sources, success criteria
@@ -178,13 +178,13 @@ everything, you failed.">
 30. TASK_LOG entry: "Synthesis complete"
 
 ### Phase G: Discussion
-31. Create `DAN_DISCUSSION.md` — append-only
+31. Create `OPERATOR_DISCUSSION.md` — append-only
 32. Present findings in accessible language
 33. Discuss, debate, refine
 34. TASK_LOG entry per topic
 
 ### Phase H: Wrap-Up
-35. Produce deliverables based on council consensus + Dan's input
+35. Produce deliverables based on council consensus + the user's input
 36. Shutdown team
 37. TASK_LOG entry: "Run complete"
 
@@ -277,7 +277,7 @@ This is what gives confidence in council output. A single agent's analysis is sm
 | Independent reviewer | Optional | Codex or different model for cross-validation |
 | PRE-SYNTHESIS.md | Only with independent reviewer | Before reveal |
 | POST-SYNTHESIS.md / SYNTHESIS.md | Yes | Final integrated findings |
-| DAN_DISCUSSION.md | Yes | Post-council discussion |
+| OPERATOR_DISCUSSION.md | Yes | Post-council discussion |
 | TeamCreate | Yes | Required for Agent Team coordination |
 
 ---

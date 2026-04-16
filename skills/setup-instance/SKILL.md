@@ -428,7 +428,11 @@ _Goal: Tailor briefing prompts to the user's work and interests. All customizati
      - `url` (RSS URL) OR GraphQL endpoint + query
 
    - Write the selected feeds to `local/feeds.json` as an array matching the
-     `FeedSource[]` shape (see `agent/feeds/types.ts`). Example:
+     `FeedSource[]` discriminated-union shape in `agent/feeds/types.ts`:
+     - **RSS feeds** use `feedUrl` (NOT `url`)
+     - **GraphQL feeds** use `graphqlUrl` + `baseUrl` + optional `limit`
+
+     Example covering both kinds:
 
      ```json
      [
@@ -436,13 +440,21 @@ _Goal: Tailor briefing prompts to the user's work and interests. All customizati
          "id": "nature-news",
          "name": "Nature News",
          "kind": "rss",
-         "url": "https://www.nature.com/nature.rss"
+         "feedUrl": "https://www.nature.com/nature.rss"
        },
        {
          "id": "custom-feed-1",
          "name": "My team's RSS",
          "kind": "rss",
-         "url": "https://example.com/feed.xml"
+         "feedUrl": "https://example.com/feed.xml"
+       },
+       {
+         "id": "example-graphql",
+         "name": "Example GraphQL Feed",
+         "kind": "graphql",
+         "graphqlUrl": "https://api.example.com/graphql",
+         "baseUrl": "https://example.com",
+         "limit": 20
        }
      ]
      ```

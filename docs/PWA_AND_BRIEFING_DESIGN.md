@@ -1,6 +1,6 @@
 # PWA & Briefing Type Design
 
-> Working design document. Dan to review and iterate before implementation.
+> Working design document. the user to review and iterate before implementation.
 
 ---
 
@@ -12,7 +12,7 @@ What exists today. Jira + Fireflies cross-referenced. "What's happening, what's 
 
 ### Proposed: `field` — AI/Agent Landscape Intelligence
 
-**Purpose:** Weekly filtered intelligence on the tools and frameworks Dan actually uses. Not a news feed — a skeptical signal-vs-noise assessment.
+**Purpose:** Weekly filtered intelligence on the tools and frameworks the user actually uses. Not a news feed — a skeptical signal-vs-noise assessment.
 
 **Sources:**
 - Claude's training knowledge (current through mid-2025, but can reason about announced releases)
@@ -25,12 +25,12 @@ What exists today. Jira + Fireflies cross-referenced. "What's happening, what's 
 
 | Key | Label | What it contains |
 |-----|-------|-----------------|
-| `SIGNAL` | Actually Matters | Changes that concretely affect Dan's stack. New Claude model? Only matters if it changes the API surface or pricing. LangGraph adds native skill packaging? That's signal. Be specific about WHY it matters to Dan. |
-| `NOISE` | Getting Attention, Skip It | Things trending that Dan can safely ignore and why. "New model benchmarks well but doesn't change your API surface" = noise. |
-| `WATCH` | Too Early to Call | Not signal yet, but worth checking next week. New framework that could replace something in Dan's stack but isn't proven. |
-| `DAN_STACK` | Your Stack Specifically | Explicit connections to: SQL-as-prompt architecture, Claude Code CLI automation, MCP integrations, Hono/Cloudflare Workers, agent orchestration patterns, the tools Dan is actively building with. |
+| `SIGNAL` | Actually Matters | Changes that concretely affect the user's stack. New Claude model? Only matters if it changes the API surface or pricing. LangGraph adds native skill packaging? That's signal. Be specific about WHY it matters to the user. |
+| `NOISE` | Getting Attention, Skip It | Things trending that the user can safely ignore and why. "New model benchmarks well but doesn't change your API surface" = noise. |
+| `WATCH` | Too Early to Call | Not signal yet, but worth checking next week. New framework that could replace something in the user's stack but isn't proven. |
+| `OPERATOR_STACK` | Your Stack Specifically | Explicit connections to: SQL-as-prompt architecture, Claude Code CLI automation, MCP integrations, Hono/Cloudflare Workers, agent orchestration patterns, the tools the user is actively building with. |
 
-**Skepticism directive:** The default failure mode is hype amplification. Bias strongly toward "this probably doesn't change anything." A new model that benchmarks well but doesn't change Dan's API surface is NOISE. A framework release that adds something Dan currently builds manually is SIGNAL.
+**Skepticism directive:** The default failure mode is hype amplification. Bias strongly toward "this probably doesn't change anything." A new model that benchmarks well but doesn't change the user's API surface is NOISE. A framework release that adds something the user currently builds manually is SIGNAL.
 
 ### Proposed: `client` — Client Intelligence Roll-Up
 
@@ -50,11 +50,11 @@ What exists today. Jira + Fireflies cross-referenced. "What's happening, what's 
 | Key | Label | What it contains |
 |-----|-------|-----------------|
 | `STATUS` | Where Things Stand | Current state of the engagement — active workstreams, recent deliverables, upcoming milestones |
-| `COMMITMENTS` | What You Promised | Action items from meetings attributed to Dan or Astral, with dates and context |
+| `COMMITMENTS` | What You Promised | Action items from meetings attributed to the user or the user's org, with dates and context |
 | `RISKS` | What Could Go Sideways | Stale deliverables, missed follow-ups, scope creep signals, unresolved client questions |
-| `NEXT_TOUCH` | Next Interaction | When's the next meeting? What should Dan prepare? What does the client expect to see? |
+| `NEXT_TOUCH` | Next Interaction | When's the next meeting? What should the user prepare? What does the client expect to see? |
 
-**Why this is separate from morning:** The morning briefing gives Dan a 10,000-foot view across everything. Client briefings zoom into one engagement when he's about to hop on a call or needs to prep. Different cadence — morning is daily, client is on-demand before meetings.
+**Why this is separate from morning:** The morning briefing gives the user a 10,000-foot view across everything. Client briefings zoom into one engagement when he's about to hop on a call or needs to prep. Different cadence — morning is daily, client is on-demand before meetings.
 
 ---
 
@@ -120,7 +120,7 @@ export interface FollowUpResponse {
 ### Design Philosophy
 
 - **The briefing content IS the UI.** No nav chrome beyond what's needed.
-- **Mobile-first, dark theme.** Dan reads this on his phone at 7am.
+- **Mobile-first, dark theme.** the user reads this on his phone at 7am.
 - **Installable PWA.** Home screen icon, standalone mode, offline fallback.
 - **Minimal interactivity.** Read briefing, maybe ask a follow-up. That's it.
 
@@ -299,7 +299,7 @@ Similar to morning.md but with different data gathering:
 ```
 Today is {{DATE}} ({{DATE_HUMAN}}).
 
-Generate Dan's weekly field intelligence briefing.
+Generate the user's weekly field intelligence briefing.
 
 ## Step 1: Gather Intelligence
 
@@ -312,11 +312,11 @@ Use available tools to check:
 
 ## Step 2: Produce Sections
 
-[SIGNAL, NOISE, WATCH, DAN_STACK definitions...]
+[SIGNAL, NOISE, WATCH, OPERATOR_STACK definitions...]
 
 ## Relevance Filter
 
-Dan's active stack:
+the user's active stack:
 - Claude Code CLI (headless automation via --print)
 - MCP integrations (Jira, Fireflies, Hugging Face)
 - Hono on Cloudflare Workers
@@ -430,8 +430,8 @@ Subagent C: Client-Relevant News (optional)
 
 Main Thread: Synthesis
   - Receive structured findings from all subagents
-  - Apply relevance filter against Dan's stack
-  - Produce SIGNAL/NOISE/WATCH/DAN_STACK sections
+  - Apply relevance filter against the user's stack
+  - Produce SIGNAL/NOISE/WATCH/OPERATOR_STACK sections
 ```
 
 ### For Client Briefings
@@ -457,7 +457,7 @@ This changes the prompt design significantly. Instead of a single prompt that sa
 
 ---
 
-## Part 6: Open Questions for Dan
+## Part 6: Open Questions for the user
 
 1. **Subagent test.** Can `claude --print` spawn subagents? Need to validate before committing to this architecture.
 

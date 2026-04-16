@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "start": "concurrently -n api,tunnel -c blue,green \"npx tsx server/local/server.ts\" \"cloudflared tunnel run ${TUNNEL_NAME:-YOUR_TUNNEL_NAME}\"",
-    "test": "npm run test --workspace=agent && npm run test --workspace=app",
+    "test": "npm run test --workspace=agent && npm run test --workspace=app && npm run test --workspace=server/worker",
     "typecheck": "tsc --noEmit -p agent/tsconfig.json && tsc --noEmit -p app/tsconfig.app.json && tsc --noEmit -p server/worker/tsconfig.json && tsc --noEmit -p server/local/tsconfig.json",
     "build": "npm run build --workspace=app"
   },

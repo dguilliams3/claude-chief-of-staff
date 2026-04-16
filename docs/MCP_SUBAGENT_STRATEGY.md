@@ -62,7 +62,7 @@ confirms to the user.
 Main Thread dispatches simultaneously:
 ├── Sonnet subagent: Jira (open issues, recent transitions)
 ├── Sonnet subagent: Fireflies (recent meetings, action items)
-├── Sonnet subagent: MS365 Teams + Email (messages mentioning Dan)
+├── Sonnet subagent: MS365 Teams + Email (messages mentioning the user)
 └── Sonnet subagent: Git history + RUN logs (recent activity)
 ```
 
@@ -80,7 +80,7 @@ For reads:
 ```
 ## Jira Summary (last 7 days)
 - 3 tickets transitioned: AI-33 (Ready for Test), ARLUT-394 (In Progress), ...
-- 2 new tickets assigned to Dan: ...
+- 2 new tickets assigned to the user: ...
 ```
 
 For writes:

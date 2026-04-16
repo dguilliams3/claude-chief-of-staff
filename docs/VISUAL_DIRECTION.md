@@ -1,6 +1,6 @@
 # Visual Direction — CoS PWA
 
-> Living document. Updated as Dan's preferences are confirmed through implementation.
+> Living document. Updated as the user's preferences are confirmed through implementation.
 > Source: Front-End Design Council (RUN-20260305-2225), Visual Review Round 01 (2026-03-06).
 > Visual review artifacts: `runs/CLAUDE-RUNS/RUN-20260305-2301-impl-spec-council/visual-review/`
 
