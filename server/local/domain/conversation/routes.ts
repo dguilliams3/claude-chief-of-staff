@@ -153,18 +153,28 @@ export function createClaudeRoutes() {
       return c.json({ error: `Question too long (max ${MAX_QUESTION_LENGTH.toLocaleString()} characters)` }, 413);
     }
 
-    // Lock key for mutex: sessionId for resumes, synthetic key for new sessions.
-    // The lockKey is never surfaced in responses — only used for deduplication.
-    const lockKey = sessionId ?? `new-session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    // Lock key: sessionId for resumes, conversationId/briefingId for new sessions.
+    // Deterministic — prevents duplicate enqueue for the same conversation.
+    const lockKey = sessionId ?? body.conversationId ?? body.briefingId ?? `anon-${Date.now()}`;
 
-    // Per-session mutex via queue: immediate 409 if session is busy
+    // Per-session mutex via queue: immediate 409 if session/conversation is busy
     const job = enqueueFollowUp(lockKey, sessionId ?? '', {
       conversationId: body.conversationId,
       briefingId: body.briefingId,
       isNewSession: body.isNewSession,
     });
     if (!job) {
-      return c.json({ error: 'Another follow-up is in progress for this session', code: 'SESSION_BUSY', sessionId: sessionId ?? '' }, 409);
+      // Distinguish: session-level busy (resume) vs conversation-level busy (new session)
+      const code = sessionId ? 'SESSION_BUSY' : 'CONVERSATION_BUSY';
+      return c.json(
+        {
+          error: sessionId
+            ? 'Another follow-up is in progress for this session'
+            : 'Another follow-up is in progress for this conversation',
+          code,
+        },
+        409,
+      );
     }
 
     // Fire-and-forget — callClaude runs in background, result stored in job queue

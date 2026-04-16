@@ -19,16 +19,16 @@
  * Do NOT: Hold open HTTP connections waiting for Claude -- use fire-and-forget + polling
  * Do NOT: Generate assistant UUID in POST handler -- it's generated in GET status on completion
  */
-import { Hono } from 'hono';
-import type { Env } from '../../types';
+import { Hono } from "hono";
+import type { Env } from "../../types";
 import {
   persistUserMessage,
   persistUserMessageDirect,
   preparePersistCompletedAssistantReply,
   prepareUpdateConversationName,
   prepareUpdateConversationSessionId,
-} from './persistence';
-import { sendPushToAll } from '../push';
+} from "./persistence";
+import { sendPushToAll } from "../push";
 
 /** Timeout for trigger proxy requests through the tunnel (ms). */
 const TRIGGER_TIMEOUT_MS = 30_000;
@@ -63,9 +63,16 @@ async function resolveFollowUpContext(
   const briefingId = body.briefingId || undefined;
 
   if (body.conversationId) {
-    const conv = await db.prepare(
-      'SELECT id, session_id, briefing_id FROM conversations WHERE id = ?'
-    ).bind(body.conversationId).first<{ id: string; session_id: string | null; briefing_id: string | null }>();
+    const conv = await db
+      .prepare(
+        "SELECT id, session_id, briefing_id FROM conversations WHERE id = ?",
+      )
+      .bind(body.conversationId)
+      .first<{
+        id: string;
+        session_id: string | null;
+        briefing_id: string | null;
+      }>();
 
     if (!conv) return null;
 
@@ -104,7 +111,7 @@ async function resolveFollowUpContext(
  * Upstream: `app/src/domain/conversation/api.ts::sendFollowUp`
  * Downstream: D1 messages table (user msg write), tunnel -> local API (job enqueue)
  */
-proxy.post('/follow-up', async (c) => {
+proxy.post("/follow-up", async (c) => {
   const body = await c.req.json<{
     sessionId?: string;
     conversationId?: string;
@@ -114,16 +121,25 @@ proxy.post('/follow-up', async (c) => {
   const { question } = body;
 
   if (!question) {
-    return c.json({ error: 'question required', code: 'INVALID_REQUEST' }, 400);
+    return c.json({ error: "question required", code: "INVALID_REQUEST" }, 400);
   }
 
   const ctx = await resolveFollowUpContext(c.env.DB, body);
 
   if (!ctx) {
     if (body.conversationId) {
-      return c.json({ error: 'Conversation not found', code: 'NOT_FOUND' }, 404);
+      return c.json(
+        { error: "Conversation not found", code: "NOT_FOUND" },
+        404,
+      );
     }
-    return c.json({ error: 'sessionId or conversationId required', code: 'INVALID_REQUEST' }, 400);
+    return c.json(
+      {
+        error: "sessionId or conversationId required",
+        code: "INVALID_REQUEST",
+      },
+      400,
+    );
   }
 
   const { isNewSession } = ctx;
@@ -135,17 +151,30 @@ proxy.post('/follow-up', async (c) => {
   // Two flows: new-chat (conversationId available) or legacy (sessionId lookup).
   // Do NOT: Skip this step — user messages were the only data that survived
   // the timeout incident that motivated this async rewrite.
-  let userMsg: { id: string; conversationId: string; createdAt: string } | null = null;
+  let userMsg: {
+    id: string;
+    conversationId: string;
+    createdAt: string;
+  } | null = null;
   try {
     if (ctx.conversationId) {
       // New-chat flow: conversationId already known
-      userMsg = await persistUserMessageDirect(c.env.DB, ctx.conversationId, question);
+      userMsg = await persistUserMessageDirect(
+        c.env.DB,
+        ctx.conversationId,
+        question,
+      );
     } else if (effectiveSessionId) {
       // Legacy flow: look up conversation by sessionId, lazy-create if needed
-      userMsg = await persistUserMessage(c.env.DB, effectiveSessionId, question, briefingId);
+      userMsg = await persistUserMessage(
+        c.env.DB,
+        effectiveSessionId,
+        question,
+        briefingId,
+      );
     }
   } catch (err) {
-    console.error('Failed to persist user message:', err);
+    console.error("Failed to persist user message:", err);
   }
 
   // Step 2: Proxy to tunnel — returns instantly with { jobId }
@@ -168,56 +197,72 @@ proxy.post('/follow-up', async (c) => {
   let tunnelRes: Response;
   try {
     tunnelRes = await fetch(`${tunnelUrl}/briefings/follow-up`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': c.req.header('Authorization') ?? '',
+        "Content-Type": "application/json",
+        Authorization: c.req.header("Authorization") ?? "",
       },
       body: JSON.stringify(tunnelPayload),
       signal: AbortSignal.timeout(TRIGGER_TIMEOUT_MS),
     });
   } catch {
-    return c.json({
-      error: 'Tunnel unreachable. Is the local API running?',
-      code: 'TUNNEL_DOWN',
-      persisted: userMsg !== null,
-      userMessage: userMsg,
-    }, 502);
+    return c.json(
+      {
+        error: "Tunnel unreachable. Is the local API running?",
+        code: "TUNNEL_DOWN",
+        persisted: userMsg !== null,
+        userMessage: userMsg,
+      },
+      502,
+    );
   }
 
   if (!tunnelRes.ok) {
-    const errorBody = await tunnelRes.text().catch(() => 'Unknown tunnel error');
+    const errorBody = await tunnelRes
+      .text()
+      .catch(() => "Unknown tunnel error");
     // Parse the local API's error to extract code if present
-    let tunnelCode = 'UNKNOWN';
+    let tunnelCode = "UNKNOWN";
     try {
       const parsed = JSON.parse(errorBody);
       if (parsed.code) tunnelCode = parsed.code;
-      else if (tunnelRes.status === 409) tunnelCode = 'SESSION_BUSY';
-    } catch { /* errorBody wasn't JSON */ }
+      else if (tunnelRes.status === 409) tunnelCode = "SESSION_BUSY";
+    } catch {
+      /* errorBody wasn't JSON */
+    }
 
     // Forward all client-facing (4xx) and server (5xx) statuses — don't collapse to 502
-    const status = [400, 404, 409, 413, 429, 500, 502, 503, 504].includes(tunnelRes.status)
+    const status = [400, 404, 409, 413, 429, 500, 502, 503, 504].includes(
+      tunnelRes.status,
+    )
       ? tunnelRes.status
       : 502;
-    return c.json({
-      error: typeof errorBody === 'string' ? errorBody : 'Unknown tunnel error',
-      code: tunnelCode,
-      persisted: userMsg !== null,
-      userMessage: userMsg,
-    }, status as 400 | 404 | 409 | 413 | 429 | 500 | 502 | 503 | 504);
+    return c.json(
+      {
+        error:
+          typeof errorBody === "string" ? errorBody : "Unknown tunnel error",
+        code: tunnelCode,
+        persisted: userMsg !== null,
+        userMessage: userMsg,
+      },
+      status as 400 | 404 | 409 | 413 | 429 | 500 | 502 | 503 | 504,
+    );
   }
 
   const data = await tunnelRes.json<{ status: string; jobId: string }>();
 
   // Step 3: Return jobId + user message metadata to PWA
-  return c.json({
-    jobId: data.jobId,
-    persisted: userMsg !== null,
-    userMessage: userMsg,
-    conversationId: ctx.conversationId ?? userMsg?.conversationId ?? null,
-    isNewSession,
-    briefingId: briefingId ?? null,
-  }, 202);
+  return c.json(
+    {
+      jobId: data.jobId,
+      persisted: userMsg !== null,
+      userMessage: userMsg,
+      conversationId: ctx.conversationId ?? userMsg?.conversationId ?? null,
+      isNewSession,
+      briefingId: briefingId ?? null,
+    },
+    202,
+  );
 });
 
 /**
@@ -234,47 +279,67 @@ proxy.post('/follow-up', async (c) => {
  * Downstream: tunnel -> local API -> `server/local/domain/conversation/followUpQueue.ts`
  * Downstream: D1 messages table (assistant msg write on completion)
  */
-proxy.get('/follow-up/status/:jobId', async (c) => {
-  const jobId = c.req.param('jobId');
+proxy.get("/follow-up/status/:jobId", async (c) => {
+  const jobId = c.req.param("jobId");
   const tunnelUrl = c.env.TUNNEL_URL;
 
-  // Context from query params (set by PWA on each poll).
-  // Note: conversationId is client-supplied, but the push-completion path (POST /internal/follow-up-complete)
-  // already persists with the authoritative conversationId from the local API. This poll path uses
-  // INSERT OR IGNORE with deterministic message IDs, so even if the client-supplied conversationId were
-  // wrong, the push path's write takes precedence. Single-user system with bearer auth mitigates tampering.
-  const conversationId = c.req.query('conversationId') ?? null;
-  const briefingId = c.req.query('briefingId') ?? null;
-  const isNewSession = c.req.query('isNewSession') === 'true';
+  // Context: conversationId comes from the job response (authoritative, set at enqueue time).
+  // Client-supplied conversationId from query params is validated against the job's value.
+  // If they mismatch, return JOB_CONTEXT_MISMATCH.
+  const clientConversationId = c.req.query("conversationId") ?? null;
+  const isNewSession = c.req.query("isNewSession") === "true";
 
   let tunnelRes: Response;
   try {
-    tunnelRes = await fetch(`${tunnelUrl}/briefings/follow-up/status/${jobId}`, {
-      headers: { 'Authorization': c.req.header('Authorization') ?? '' },
-      signal: AbortSignal.timeout(STATUS_TIMEOUT_MS),
-    });
+    tunnelRes = await fetch(
+      `${tunnelUrl}/briefings/follow-up/status/${jobId}`,
+      {
+        headers: { Authorization: c.req.header("Authorization") ?? "" },
+        signal: AbortSignal.timeout(STATUS_TIMEOUT_MS),
+      },
+    );
   } catch {
-    return c.json({ error: 'Tunnel unreachable' }, 502);
+    return c.json({ error: "Tunnel unreachable" }, 502);
   }
 
   if (!tunnelRes.ok) {
     const status = tunnelRes.status === 404 ? 404 : 502;
-    return c.json({ error: 'Job not found or expired' }, status as 404 | 502);
+    return c.json({ error: "Job not found or expired" }, status as 404 | 502);
   }
 
   const job = await tunnelRes.json<{
     id: string;
     sessionId: string;
-    status: 'running' | 'completed' | 'failed';
+    status: "running" | "completed" | "failed";
     answer?: string;
     newSessionId?: string;
     chatName?: string;
     error?: string;
+    conversationId?: string;
   }>();
 
   // If not completed, return as-is (no D1 work)
-  if (job.status !== 'completed') {
+  if (job.status !== "completed") {
     return c.json(job);
+  }
+
+  // Use the job's authoritative conversationId (set at enqueue time by the POST handler).
+  // Fall back to client-supplied only if the job doesn't carry one (legacy jobs).
+  const conversationId = job.conversationId ?? clientConversationId;
+
+  // Guard: client supplied a conversationId that doesn't match the job's — mis-association risk.
+  if (
+    clientConversationId &&
+    job.conversationId &&
+    clientConversationId !== job.conversationId
+  ) {
+    return c.json(
+      {
+        error: "conversationId does not match job context",
+        code: "JOB_CONTEXT_MISMATCH",
+      },
+      400,
+    );
   }
 
   // Completed — persist assistant message and update metadata.
@@ -294,20 +359,31 @@ proxy.get('/follow-up/status/:jobId', async (c) => {
 
       if (isNewSession && returnedSessionId) {
         statements.push(
-          ...prepareUpdateConversationSessionId(c.env.DB, conversationId, returnedSessionId),
+          ...prepareUpdateConversationSessionId(
+            c.env.DB,
+            conversationId,
+            returnedSessionId,
+          ),
         );
       }
       if (job.chatName) {
-        statements.push(prepareUpdateConversationName(c.env.DB, conversationId, job.chatName));
+        statements.push(
+          prepareUpdateConversationName(c.env.DB, conversationId, job.chatName),
+        );
       }
 
       statements.push(
-        preparePersistCompletedAssistantReply(c.env.DB, conversationId, job.id, job.answer ?? ''),
+        preparePersistCompletedAssistantReply(
+          c.env.DB,
+          conversationId,
+          job.id,
+          job.answer ?? "",
+        ),
       );
 
       await c.env.DB.batch(statements);
     } catch (err) {
-      console.error('Failed to persist follow-up completion writes:', err);
+      console.error("Failed to persist follow-up completion writes:", err);
       persistFailed = true;
     }
   }
@@ -318,9 +394,9 @@ proxy.get('/follow-up/status/:jobId', async (c) => {
     persistFailed,
     assistantMessage: {
       id: assistantMsgId,
-      conversationId: conversationId ?? '',
-      role: 'assistant' as const,
-      content: job.answer ?? '',
+      conversationId: conversationId ?? "",
+      role: "assistant" as const,
+      content: job.answer ?? "",
       createdAt: assistantCreatedAt,
     },
     chatName: job.chatName ?? null,
@@ -341,7 +417,7 @@ proxy.get('/follow-up/status/:jobId', async (c) => {
  * Do NOT: Remove the poll-based persistence in GET /follow-up/status/:jobId — it's
  *         the fast-path for live users; this endpoint is the safety net.
  */
-proxy.post('/internal/follow-up-complete', async (c) => {
+proxy.post("/internal/follow-up-complete", async (c) => {
   const body = await c.req.json<{
     jobId: string;
     conversationId: string;
@@ -353,8 +429,8 @@ proxy.post('/internal/follow-up-complete', async (c) => {
   }>();
 
   const { jobId, conversationId, answer } = body;
-  if (!jobId || !conversationId || typeof answer !== 'string') {
-    return c.json({ error: 'jobId, conversationId, and answer required' }, 400);
+  if (!jobId || !conversationId || typeof answer !== "string") {
+    return c.json({ error: "jobId, conversationId, and answer required" }, 400);
   }
 
   try {
@@ -362,15 +438,26 @@ proxy.post('/internal/follow-up-complete', async (c) => {
 
     if (body.isNewSession && body.sessionId) {
       statements.push(
-        ...prepareUpdateConversationSessionId(c.env.DB, conversationId, body.sessionId),
+        ...prepareUpdateConversationSessionId(
+          c.env.DB,
+          conversationId,
+          body.sessionId,
+        ),
       );
     }
     if (body.chatName) {
-      statements.push(prepareUpdateConversationName(c.env.DB, conversationId, body.chatName));
+      statements.push(
+        prepareUpdateConversationName(c.env.DB, conversationId, body.chatName),
+      );
     }
 
     statements.push(
-      preparePersistCompletedAssistantReply(c.env.DB, conversationId, jobId, answer),
+      preparePersistCompletedAssistantReply(
+        c.env.DB,
+        conversationId,
+        jobId,
+        answer,
+      ),
     );
 
     // Update session token metadata if usage data is present.
@@ -379,13 +466,15 @@ proxy.post('/internal/follow-up-complete', async (c) => {
     const effectiveSessionId = body.sessionId || null;
     if (body.usage && effectiveSessionId) {
       statements.push(
-        c.env.DB.prepare(`
+        c.env.DB.prepare(
+          `
           UPDATE sessions
           SET total_tokens = ?, context_window = ?,
               total_cost_usd = MAX(total_cost_usd, ?),
               last_used_at = datetime('now')
           WHERE id = ?
-        `).bind(
+        `,
+        ).bind(
           body.usage.totalTokens,
           body.usage.contextWindow,
           body.usage.costUsd,
@@ -398,18 +487,26 @@ proxy.post('/internal/follow-up-complete', async (c) => {
 
     // Push notification for follow-up response (non-fatal, fire-and-forget).
     // The SW suppresses the notification if the PWA is visible on that device.
-    if (c.env.VAPID_PUBLIC_KEY && c.env.VAPID_PRIVATE_KEY && c.env.VAPID_SUBJECT) {
-      const snippet = answer.length > 80 ? answer.slice(0, 80) + '…' : answer;
-      const pushPromise = sendPushToAll(c.env.DB, {
-        title: 'Response ready',
-        body: snippet,
-        url: '/',
-        icon: '/icon-192.png',
-      }, {
-        publicKey: c.env.VAPID_PUBLIC_KEY,
-        privateKey: c.env.VAPID_PRIVATE_KEY,
-        subject: c.env.VAPID_SUBJECT,
-      }).catch(err => console.error('Follow-up push failed:', err));
+    if (
+      c.env.VAPID_PUBLIC_KEY &&
+      c.env.VAPID_PRIVATE_KEY &&
+      c.env.VAPID_SUBJECT
+    ) {
+      const snippet = answer.length > 80 ? answer.slice(0, 80) + "…" : answer;
+      const pushPromise = sendPushToAll(
+        c.env.DB,
+        {
+          title: "Response ready",
+          body: snippet,
+          url: "/",
+          icon: "/icon-192.png",
+        },
+        {
+          publicKey: c.env.VAPID_PUBLIC_KEY,
+          privateKey: c.env.VAPID_PRIVATE_KEY,
+          subject: c.env.VAPID_SUBJECT,
+        },
+      ).catch((err) => console.error("Follow-up push failed:", err));
 
       if (c.executionCtx?.waitUntil) {
         c.executionCtx.waitUntil(pushPromise);
@@ -418,31 +515,31 @@ proxy.post('/internal/follow-up-complete', async (c) => {
 
     return c.json({ ok: true });
   } catch (err) {
-    console.error('Push-completion D1 write failed:', err);
-    return c.json({ error: 'D1 write failed' }, 500);
+    console.error("Push-completion D1 write failed:", err);
+    return c.json({ error: "D1 write failed" }, 500);
   }
 });
 
 /**
  * Proxies a briefing trigger request to the local API via the cloudflared tunnel.
  */
-proxy.post('/trigger', async (c) => {
+proxy.post("/trigger", async (c) => {
   const body = await c.req.json();
   const tunnelUrl = c.env.TUNNEL_URL;
 
   try {
     const res = await fetch(`${tunnelUrl}/briefings/trigger`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': c.req.header('Authorization') ?? '',
+        "Content-Type": "application/json",
+        Authorization: c.req.header("Authorization") ?? "",
       },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(TRIGGER_TIMEOUT_MS),
     });
 
     if (!res.ok) {
-      const errorBody = await res.text().catch(() => 'Trigger failed');
+      const errorBody = await res.text().catch(() => "Trigger failed");
       const status = [400, 409, 500].includes(res.status) ? res.status : 502;
       return c.json({ error: errorBody }, status as 400 | 409 | 500 | 502);
     }
@@ -450,24 +547,27 @@ proxy.post('/trigger', async (c) => {
     const data = await res.json();
     return c.json(data);
   } catch {
-    return c.json({ error: 'Tunnel unreachable. Is the local API running?' }, 502);
+    return c.json(
+      { error: "Tunnel unreachable. Is the local API running?" },
+      502,
+    );
   }
 });
 
 /** GET /status/:jobId — proxies trigger status polling to the local API */
-proxy.get('/status/:jobId', async (c) => {
-  const jobId = c.req.param('jobId');
+proxy.get("/status/:jobId", async (c) => {
+  const jobId = c.req.param("jobId");
   const tunnelUrl = c.env.TUNNEL_URL;
 
   try {
     const res = await fetch(`${tunnelUrl}/briefings/status/${jobId}`, {
-      headers: { 'Authorization': c.req.header('Authorization') ?? '' },
+      headers: { Authorization: c.req.header("Authorization") ?? "" },
       signal: AbortSignal.timeout(STATUS_TIMEOUT_MS),
     });
     const data = await res.json();
     return c.json(data, res.status as 200 | 404);
   } catch {
-    return c.json({ error: 'Tunnel unreachable' }, 502);
+    return c.json({ error: "Tunnel unreachable" }, 502);
   }
 });
 
