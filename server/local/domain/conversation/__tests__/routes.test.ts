@@ -144,13 +144,13 @@ describe('follow-up lock key behavior', () => {
       1,
       'conv-123',
       '',
-      expect.objectContaining({ conversationId: 'conv-123', isNewSession: true }),
+      expect.objectContaining({ conversationId: 'conv-123', isNewSession: undefined }),
     );
     expect(enqueueFollowUpMock).toHaveBeenNthCalledWith(
       2,
       'conv-123',
       '',
-      expect.objectContaining({ conversationId: 'conv-123', isNewSession: true }),
+      expect.objectContaining({ conversationId: 'conv-123', isNewSession: undefined }),
     );
   });
 });
