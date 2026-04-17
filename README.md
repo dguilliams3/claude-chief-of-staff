@@ -160,3 +160,7 @@ This repo ships opinionated tooling so forks stay maintainable:
 - **`docs/DOCSTRING_GUIDE.md`** — Cross-reference tag conventions (`Upstream:`, `Downstream:`, `Tested by:`)
 - **`docs/VISUAL_DIRECTION.md`** — Design guidelines for the PWA
 - **`docs/PWA_AND_BRIEFING_DESIGN.md`** — How briefings map to PWA views
+
+---
+
+Built with [4th Layer Engineering](https://github.com/dguilliams3/4th-layer-scaffold).
