@@ -1,0 +1,22 @@
+{
+  "name": "claude-chief-of-staff",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "app",
+    "server/local",
+    "server/worker",
+    "agent"
+  ],
+  "scripts": {
+    "start": "concurrently -n api,tunnel -c blue,green \"npx tsx server/local/server.ts\" \"cloudflared tunnel run ${TUNNEL_NAME:-YOUR_TUNNEL_NAME}\"",
+    "test": "npm run test --workspace=agent && npm run test --workspace=app && npm run test --workspace=server/worker && npm run test --workspace=server/local && vitest run",
+    "typecheck": "tsc --noEmit -p agent/tsconfig.json && tsc --noEmit -p app/tsconfig.app.json && tsc --noEmit -p server/worker/tsconfig.json && tsc --noEmit -p server/local/tsconfig.json",
+    "build": "npm run build --workspace=app",
+    "preflight": "bash scripts/preflight.sh"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "vitest": "^4.1.0"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    // skipLibCheck not needed here — no broken third-party .d.ts in this workspace.
+    // Do NOT add skipLibCheck as a bandaid for type errors in our own code.
+    "noEmit": true
+  },
+  "include": ["*.ts", "routes/**/*.ts", "domain/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

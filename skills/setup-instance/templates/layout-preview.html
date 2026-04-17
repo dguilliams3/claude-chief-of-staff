@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Layout Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; background: {{SURFACE_COLOR}}; color: {{TEXT_PRIMARY_COLOR}}; }
+    .layout-option {
+      border: 2px solid transparent;
+      border-radius: 16px;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.1s;
+      background: {{SURFACE_CARD_COLOR}};
+    }
+    .layout-option:hover { transform: translateY(-1px); }
+    .layout-option.selected { border-color: {{ACCENT_COLOR}}; }
+    .mock-header { background: {{SURFACE_HOVER_COLOR}}; border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; }
+    .mock-card {
+      background: {{SURFACE_COLOR}}; border-radius: 8px; padding: 10px 12px;
+      margin-bottom: 6px; font-size: 12px; line-height: 1.5;
+    }
+    .mock-tab { display: inline-block; padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+    .mock-tab.active { background: {{ACCENT_COLOR}}; color: {{SURFACE_COLOR}}; }
+    .mock-tab.inactive { color: {{TEXT_MUTED_COLOR}}; }
+    .layout-label { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+    .layout-desc { font-size: 0.8rem; color: {{TEXT_MUTED_COLOR}}; margin-bottom: 12px; }
+  </style>
+</head>
+<body class="min-h-screen p-6">
+  <div class="max-w-xl mx-auto">
+    <h1 class="text-2xl font-bold mb-2">Choose Your Layout</h1>
+    <p class="text-sm mb-6" style="color: {{TEXT_MUTED_COLOR}}">How should your briefing cards be organized?</p>
+
+    <!-- Layout 1: Standard (linear cards) -->
+    <div class="layout-option" onclick="select(this)">
+      <div class="layout-label">{{LAYOUT_1_NAME}}</div>
+      <div class="layout-desc">{{LAYOUT_1_DESCRIPTION}}</div>
+      <div class="mock-header">
+        <div style="display: flex; gap: 8px;">
+          <span class="mock-tab active">Work</span>
+          <span class="mock-tab inactive">Field</span>
+          <span class="mock-tab inactive">Chats</span>
+        </div>
+      </div>
+      <div class="mock-card" style="border-left: 3px solid {{SEVERITY_INFO_COLOR}}">
+        <div style="font-weight: 600; color: {{TEXT_PRIMARY_COLOR}}">Good Morning</div>
+        <div style="color: {{TEXT_SECONDARY_COLOR}}">Three meetings today...</div>
+      </div>
+      <div class="mock-card" style="border-left: 3px solid {{SEVERITY_FLAG_COLOR}}">
+        <div style="font-weight: 600; color: {{TEXT_PRIMARY_COLOR}}">Untracked Items</div>
+        <div style="color: {{TEXT_SECONDARY_COLOR}}">4 commitments with no tickets...</div>
+      </div>
+      <div class="mock-card" style="border-left: 3px solid {{SEVERITY_WARN_COLOR}}">
+        <div style="font-weight: 600; color: {{TEXT_PRIMARY_COLOR}}">Ticket Check</div>
+        <div style="color: {{TEXT_SECONDARY_COLOR}}">2 flagged, 8 stale...</div>
+      </div>
+    </div>
+
+    <!-- Layout 2: Compact (collapsed sections) -->
+    <div class="layout-option" onclick="select(this)">
+      <div class="layout-label">{{LAYOUT_2_NAME}}</div>
+      <div class="layout-desc">{{LAYOUT_2_DESCRIPTION}}</div>
+      <div class="mock-header">
+        <div style="display: flex; gap: 8px;">
+          <span class="mock-tab active">Work</span>
+          <span class="mock-tab inactive">Field</span>
+          <span class="mock-tab inactive">Chats</span>
+        </div>
+      </div>
+      <div class="mock-card" style="border-left: 3px solid {{SEVERITY_INFO_COLOR}}; display: flex; align-items: center; justify-content: space-between;">
+        <div style="font-weight: 600; color: {{TEXT_PRIMARY_COLOR}}; font-size: 12px;">Good Morning</div>
+        <div style="color: {{TEXT_MUTED_COLOR}}; font-size: 10px;">tap to expand</div>
+      </div>
+      <div class="mock-card" style="border-left: 3px solid {{SEVERITY_FLAG_COLOR}}; display: flex; align-items: center; justify-content: space-between;">
+        <div style="font-weight: 600; color: {{TEXT_PRIMARY_COLOR}}; font-size: 12px;">Untracked Items <span style="color: {{SEVERITY_FLAG_COLOR}}; font-size: 10px; margin-left: 4px;">4</span></div>
+        <div style="color: {{TEXT_MUTED_COLOR}}; font-size: 10px;">tap to expand</div>
+      </div>
+      <div class="mock-card" style="border-left: 3px solid {{SEVERITY_WARN_COLOR}}; display: flex; align-items: center; justify-content: space-between;">
+        <div style="font-weight: 600; color: {{TEXT_PRIMARY_COLOR}}; font-size: 12px;">Ticket Check <span style="color: {{SEVERITY_WARN_COLOR}}; font-size: 10px; margin-left: 4px;">2 flags</span></div>
+        <div style="color: {{TEXT_MUTED_COLOR}}; font-size: 10px;">tap to expand</div>
+      </div>
+      <div class="mock-card" style="border-left: 3px solid {{SEVERITY_INFO_COLOR}}">
+        <div style="font-weight: 600; color: {{TEXT_PRIMARY_COLOR}}; font-size: 12px;">Priorities</div>
+        <div style="color: {{TEXT_SECONDARY_COLOR}}; font-size: 11px; margin-top: 4px;">1. Assign unowned ticket<br>2. Unblock PR #247</div>
+      </div>
+    </div>
+
+    <!-- Layout 3: Dashboard (grid) -->
+    <div class="layout-option" onclick="select(this)">
+      <div class="layout-label">{{LAYOUT_3_NAME}}</div>
+      <div class="layout-desc">{{LAYOUT_3_DESCRIPTION}}</div>
+      <div class="mock-header">
+        <div style="display: flex; gap: 8px;">
+          <span class="mock-tab active">Work</span>
+          <span class="mock-tab inactive">Field</span>
+          <span class="mock-tab inactive">Chats</span>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+        <div class="mock-card" style="border-left: 3px solid {{SEVERITY_INFO_COLOR}}">
+          <div style="font-weight: 600; color: {{TEXT_PRIMARY_COLOR}}; font-size: 11px;">Morning</div>
+          <div style="color: {{TEXT_SECONDARY_COLOR}}; font-size: 10px;">3 meetings</div>
+        </div>
+        <div class="mock-card" style="border-left: 3px solid {{SEVERITY_FLAG_COLOR}}">
+          <div style="font-weight: 600; color: {{TEXT_PRIMARY_COLOR}}; font-size: 11px;">Untracked</div>
+          <div style="color: {{SEVERITY_FLAG_COLOR}}; font-size: 10px;">4 items</div>
+        </div>
+        <div class="mock-card" style="border-left: 3px solid {{SEVERITY_WARN_COLOR}}">
+          <div style="font-weight: 600; color: {{TEXT_PRIMARY_COLOR}}; font-size: 11px;">Tickets</div>
+          <div style="color: {{SEVERITY_WARN_COLOR}}; font-size: 10px;">2 flags</div>
+        </div>
+        <div class="mock-card" style="border-left: 3px solid {{SEVERITY_INFO_COLOR}}">
+          <div style="font-weight: 600; color: {{TEXT_PRIMARY_COLOR}}; font-size: 11px;">Priorities</div>
+          <div style="color: {{TEXT_SECONDARY_COLOR}}; font-size: 10px;">5 items</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function select(el) {
+      document.querySelectorAll('.layout-option').forEach(p => p.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+  </script>
+</body>
+</html>
