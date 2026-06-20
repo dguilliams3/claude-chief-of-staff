@@ -37,6 +37,12 @@ export function normalizeTimestamp(sqliteTs: string): string {
   return sqliteTs.includes('T') ? sqliteTs : sqliteTs.replace(' ', 'T') + 'Z';
 }
 
+export interface ConversationIdentity {
+  displayName: string | null;
+  tagline: string | null;
+  avatar: string | null;
+}
+
 /**
  * Persists a user message to D1 BEFORE proxying to the tunnel.
  *
@@ -250,7 +256,16 @@ export async function ensureConversation(
 export async function createBlankConversation(
   db: D1Database,
   briefingId?: string,
-): Promise<{ id: string; briefingId: string | null; sessionId: string | null; name: string | null; createdAt: string }> {
+): Promise<{
+  id: string;
+  briefingId: string | null;
+  sessionId: string | null;
+  name: string | null;
+  displayName: string | null;
+  tagline: string | null;
+  avatar: string | null;
+  createdAt: string;
+}> {
   const convId = crypto.randomUUID();
 
   if (briefingId) {
@@ -261,8 +276,20 @@ export async function createBlankConversation(
     ).bind(convId, briefingId).run();
 
     const row = await db.prepare(
-      'SELECT id, briefing_id, session_id, name, created_at FROM conversations WHERE id = ?'
-    ).bind(convId).first<{ id: string; briefing_id: string | null; session_id: string | null; name: string | null; created_at: string }>();
+      `SELECT
+         id, briefing_id, session_id, name, display_name, tagline, avatar, created_at
+       FROM conversations
+       WHERE id = ?`
+    ).bind(convId).first<{
+      id: string;
+      briefing_id: string | null;
+      session_id: string | null;
+      name: string | null;
+      display_name: string | null;
+      tagline: string | null;
+      avatar: string | null;
+      created_at: string;
+    }>();
 
     if (!row) throw new Error(`Failed to create conversation ${convId} for briefing ${briefingId}`);
 
@@ -271,14 +298,27 @@ export async function createBlankConversation(
       briefingId: row.briefing_id,
       sessionId: row.session_id,
       name: row.name,
+      displayName: row.display_name,
+      tagline: row.tagline,
+      avatar: row.avatar,
       createdAt: normalizeTimestamp(row.created_at),
     };
   }
 
   // Standalone conversation (no briefingId) -- always inserts
   const result = await db.prepare(
-    'INSERT INTO conversations (id) VALUES (?) RETURNING briefing_id, session_id, name, created_at'
-  ).bind(convId).first<{ briefing_id: string | null; session_id: string | null; name: string | null; created_at: string }>();
+    `INSERT INTO conversations (id)
+     VALUES (?)
+     RETURNING briefing_id, session_id, name, display_name, tagline, avatar, created_at`
+  ).bind(convId).first<{
+    briefing_id: string | null;
+    session_id: string | null;
+    name: string | null;
+    display_name: string | null;
+    tagline: string | null;
+    avatar: string | null;
+    created_at: string;
+  }>();
 
   if (!result) throw new Error(`INSERT RETURNING failed for conversation ${convId}`);
 
@@ -287,6 +327,9 @@ export async function createBlankConversation(
     briefingId: result.briefing_id,
     sessionId: result.session_id,
     name: result.name,
+    displayName: result.display_name,
+    tagline: result.tagline,
+    avatar: result.avatar,
     createdAt: normalizeTimestamp(result.created_at),
   };
 }
@@ -324,6 +367,34 @@ export function prepareUpdateConversationName(
   return db.prepare(
     'UPDATE conversations SET name = ? WHERE id = ?'
   ).bind(name, conversationId);
+}
+
+/**
+ * Updates a conversation's user-curated identity fields.
+ *
+ * Keeps citizen identity separate from the model-generated `name` title.
+ */
+export async function updateConversationIdentity(
+  db: D1Database,
+  conversationId: string,
+  identity: ConversationIdentity,
+): Promise<void> {
+  await prepareUpdateConversationIdentity(db, conversationId, identity).run();
+}
+
+/**
+ * Prepares UPDATE statement for user-curated identity fields.
+ */
+export function prepareUpdateConversationIdentity(
+  db: D1Database,
+  conversationId: string,
+  identity: ConversationIdentity,
+): D1PreparedStatement {
+  return db.prepare(
+    `UPDATE conversations
+     SET display_name = ?, tagline = ?, avatar = ?
+     WHERE id = ?`
+  ).bind(identity.displayName, identity.tagline, identity.avatar, conversationId);
 }
 
 /**

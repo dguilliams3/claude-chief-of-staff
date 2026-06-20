@@ -16,7 +16,12 @@
  */
 import { Hono } from 'hono';
 import type { Env } from '../../types';
-import { normalizeTimestamp, createBlankConversation, updateConversationName } from './persistence';
+import {
+  normalizeTimestamp,
+  createBlankConversation,
+  updateConversationIdentity,
+  updateConversationName,
+} from './persistence';
 
 const conversations = new Hono<{ Bindings: Env }>();
 
@@ -46,6 +51,7 @@ conversations.get('/', async (c) => {
   const rows = await c.env.DB.prepare(`
     SELECT
       c.id, c.session_id, c.briefing_id, c.name, c.created_at,
+      c.display_name, c.tagline, c.avatar,
       MAX(m.created_at) AS last_message_at,
       COUNT(m.id) AS message_count,
       s.total_tokens, s.context_window,
@@ -66,6 +72,9 @@ conversations.get('/', async (c) => {
       briefingId: (r.briefing_id as string) || null,
       sessionId: (r.session_id as string) || null,
       name: (r.name as string) || null,
+      displayName: (r.display_name as string) || null,
+      tagline: (r.tagline as string) || null,
+      avatar: (r.avatar as string) || null,
       createdAt: normalizeTimestamp(r.created_at as string),
       lastMessageAt: r.last_message_at ? normalizeTimestamp(r.last_message_at as string) : null,
       messageCount: (r.message_count as number) ?? 0,
@@ -141,7 +150,7 @@ conversations.get('/:id/messages', async (c) => {
 conversations.get('/by-briefing/:briefingId', async (c) => {
   const briefingId = c.req.param('briefingId');
   const rows = await c.env.DB.prepare(
-    `SELECT c.id, c.session_id, c.briefing_id, c.name, c.created_at,
+    `SELECT c.id, c.session_id, c.briefing_id, c.name, c.display_name, c.tagline, c.avatar, c.created_at,
             COUNT(m.id) AS message_count,
             MAX(m.created_at) AS last_message_at,
             s.total_tokens, s.context_window
@@ -159,6 +168,9 @@ conversations.get('/by-briefing/:briefingId', async (c) => {
       sessionId: (r.session_id as string) || null,
       briefingId: r.briefing_id as string,
       name: (r.name as string) || null,
+      displayName: (r.display_name as string) || null,
+      tagline: (r.tagline as string) || null,
+      avatar: (r.avatar as string) || null,
       createdAt: normalizeTimestamp(r.created_at as string),
       messageCount: (r.message_count as number) ?? 0,
       lastMessageAt: r.last_message_at ? normalizeTimestamp(r.last_message_at as string) : null,
@@ -208,11 +220,32 @@ conversations.post('/', async (c) => {
  */
 conversations.patch('/:id', async (c) => {
   const conversationId = c.req.param('id');
-  const body = await c.req.json<{ name?: string }>();
-  const name = body.name;
+  const body = await c.req.json<{
+    name?: string;
+    displayName?: string | null;
+    tagline?: string | null;
+    avatar?: string | null;
+  }>();
+  const updates: Array<Promise<void>> = [];
 
-  if (typeof name !== 'string' || !name.trim()) {
-    return c.json({ error: 'name is required (non-empty string)' }, 400);
+  const hasDisplayName = Object.hasOwn(body, 'displayName');
+  const hasTagline = Object.hasOwn(body, 'tagline');
+  const hasAvatar = Object.hasOwn(body, 'avatar');
+
+  if (body.name !== undefined && typeof body.name !== 'string') {
+    return c.json({ error: 'name must be a string when provided' }, 400);
+  }
+
+  if (hasDisplayName && body.displayName !== null && typeof body.displayName !== 'string') {
+    return c.json({ error: 'displayName must be a string or null' }, 400);
+  }
+
+  if (hasTagline && body.tagline !== null && typeof body.tagline !== 'string') {
+    return c.json({ error: 'tagline must be a string or null' }, 400);
+  }
+
+  if (hasAvatar && body.avatar !== null && typeof body.avatar !== 'string') {
+    return c.json({ error: 'avatar must be a string or null' }, 400);
   }
 
   // Verify conversation exists
@@ -225,8 +258,35 @@ conversations.patch('/:id', async (c) => {
   }
 
   try {
-    await updateConversationName(c.env.DB, conversationId, name.trim());
-    return c.json({ id: conversationId, name: name.trim() });
+    const response: Record<string, string | null> = { id: conversationId };
+
+    if (typeof body.name === 'string') {
+      const trimmedName = body.name.trim();
+      if (!trimmedName) {
+        return c.json({ error: 'name is required (non-empty string)' }, 400);
+      }
+      updates.push(updateConversationName(c.env.DB, conversationId, trimmedName));
+      response.name = trimmedName;
+    }
+
+    if (hasDisplayName || hasTagline || hasAvatar) {
+      const identity = {
+        displayName: hasDisplayName ? normalizeIdentityField(body.displayName) : null,
+        tagline: hasTagline ? normalizeIdentityField(body.tagline) : null,
+        avatar: hasAvatar ? normalizeIdentityField(body.avatar) : null,
+      };
+      updates.push(updateConversationIdentity(c.env.DB, conversationId, identity));
+      if (hasDisplayName) response.displayName = identity.displayName;
+      if (hasTagline) response.tagline = identity.tagline;
+      if (hasAvatar) response.avatar = identity.avatar;
+    }
+
+    if (updates.length === 0) {
+      return c.json({ error: 'No updatable fields provided' }, 400);
+    }
+
+    await Promise.all(updates);
+    return c.json(response);
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to update conversation';
     return c.json({ error: msg }, 500);
@@ -234,3 +294,9 @@ conversations.patch('/:id', async (c) => {
 });
 
 export { conversations };
+
+function normalizeIdentityField(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}

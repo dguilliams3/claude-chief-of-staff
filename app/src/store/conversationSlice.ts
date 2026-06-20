@@ -90,6 +90,15 @@ export interface ConversationSlice {
     conversationId: string;
     name: string;
   }) => void;
+  /** Updates user-curated citizen identity fields in briefingConversations. */
+  updateBriefingConversationIdentity: (options: {
+    conversationId: string;
+    identity: {
+      displayName?: string | null;
+      tagline?: string | null;
+      avatar?: string | null;
+    };
+  }) => void;
 }
 
 // mergeMessages imported from @/domain/conversation
@@ -721,6 +730,32 @@ export function createConversationSlice(
           (conversation) =>
             conversation.id === conversationId
               ? { ...conversation, name }
+              : conversation,
+        ),
+      });
+    },
+
+    updateBriefingConversationIdentity({
+      conversationId,
+      identity,
+    }: {
+      conversationId: string;
+      identity: {
+        displayName?: string | null;
+        tagline?: string | null;
+        avatar?: string | null;
+      };
+    }) {
+      set({
+        briefingConversations: get().briefingConversations.map(
+          (conversation) =>
+            conversation.id === conversationId
+              ? {
+                  ...conversation,
+                  displayName: identity.displayName ?? null,
+                  tagline: identity.tagline ?? null,
+                  avatar: identity.avatar ?? null,
+                }
               : conversation,
         ),
       });

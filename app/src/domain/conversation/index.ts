@@ -25,7 +25,9 @@ export {
   fetchConversationByBriefing,
   createConversation,
   updateConversationName,
+  updateConversationIdentity,
 } from './api';
+export type { ConversationIdentityUpdate } from './api';
 
 // Errors
 export { FollowUpError, ConversationError } from './errors';

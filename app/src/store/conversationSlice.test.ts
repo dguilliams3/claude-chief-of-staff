@@ -120,6 +120,30 @@ describe('initial state', () => {
   });
 });
 
+describe('updateBriefingConversationIdentity', () => {
+  it('syncs identity fields for the matching briefing conversation', () => {
+    const { get, set } = createTestSlice();
+    set({
+      briefingConversations: [makeConversationListItem()],
+    });
+
+    get().updateBriefingConversationIdentity({
+      conversationId: 'c-001',
+      identity: {
+        displayName: 'Atlas',
+        tagline: 'Night shift citizen',
+        avatar: ':)',
+      },
+    });
+
+    expect(get().briefingConversations[0]).toMatchObject({
+      displayName: 'Atlas',
+      tagline: 'Night shift citizen',
+      avatar: ':)',
+    });
+  });
+});
+
 // ============================================================
 // EMPTY_HISTORY sentinel
 // ============================================================

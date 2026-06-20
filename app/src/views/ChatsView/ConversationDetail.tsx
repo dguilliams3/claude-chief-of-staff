@@ -3,12 +3,12 @@
  *
  * Renders all messages using ChatThread components. Includes an input bar
  * at bottom to resume the conversation and a back button to the list.
- * The conversation name in the header is tappable for inline rename.
+ * The citizen identity in the header is editable inline.
  *
  * Used by: `app/src/views/ChatsView/ChatsView.tsx` -- when a conversation is selected
  * See also: `app/src/components/ChatThread/` -- shared message rendering
  * See also: `app/src/store/conversationSlice.ts::selectConversation` -- fetches messages
- * See also: `app/src/store/chatsSlice.ts::renameConversation` -- persists name to D1
+ * See also: `app/src/store/chatsSlice.ts::updateConversationIdentity` -- persists identity fields
  * Do NOT: Duplicate ChatBubble -- import from ChatThread/
  */
 import { useState, useRef, useEffect } from 'react';
@@ -23,126 +23,167 @@ export function ConversationDetail() {
   const sendFollowUp = useStore((s) => s.sendFollowUp);
   const pendingFollowUps = useStore((s) => s.pendingFollowUps);
   const error = useStore((s) => s.conversationErrors[selected?.id ?? '']);
-
-  const renameConversation = useStore((s) => s.renameConversation);
-  const updateBriefingConversationName = useStore((s) => s.updateBriefingConversationName);
+  const updateConversationIdentity = useStore((s) => s.updateConversationIdentity);
+  const updateBriefingConversationIdentity = useStore((s) => s.updateBriefingConversationIdentity);
 
   const [copied, setCopied] = useState(false);
-  const [isRenaming, setIsRenaming] = useState(false);
-  const [renameValue, setRenameValue] = useState('');
+  const [isEditingIdentity, setIsEditingIdentity] = useState(false);
+  const [displayNameValue, setDisplayNameValue] = useState('');
+  const [taglineValue, setTaglineValue] = useState('');
+  const [avatarValue, setAvatarValue] = useState('');
   const [saved, setSaved] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const displayNameInputRef = useRef<HTMLInputElement>(null);
+  const identitySaveInFlight = useRef(false);
 
-  // Auto-focus and select-all when rename input mounts
   useEffect(() => {
-    if (isRenaming) {
-      inputRef.current?.focus();
-      inputRef.current?.select();
+    if (isEditingIdentity) {
+      displayNameInputRef.current?.focus();
+      displayNameInputRef.current?.select();
     }
-  }, [isRenaming]);
+  }, [isEditingIdentity]);
 
   if (!selected) return null;
+  const conversation = selected;
 
-  // Only show loading indicator for THIS conversation's pending follow-up.
-  // Match by conversationId — always the primary history key
-  const thisHistoryKey = selected.id;
+  const thisHistoryKey = conversation.id;
   const pendingFollowUp = pendingFollowUps[thisHistoryKey];
   const isThisPending = !!pendingFollowUp;
+  const headerDisplayName = conversation.displayName ?? conversation.name ?? 'Conversation';
+  const headerAvatar = (conversation.avatar ?? headerDisplayName.charAt(0).toUpperCase()) || '*';
 
   function handleCopySessionId() {
-    if (!selected?.sessionId) return;
-    navigator.clipboard.writeText(selected.sessionId);
+    if (!conversation.sessionId) return;
+    navigator.clipboard.writeText(conversation.sessionId);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
   function handleSend(question: string) {
-    if (!selected) return;
     sendFollowUp({
-      briefingId: selected.briefingId ?? undefined,
-      sessionId: selected.sessionId ?? undefined,
+      briefingId: conversation.briefingId ?? undefined,
+      sessionId: conversation.sessionId ?? undefined,
       question,
-      conversationId: selected.id,
+      conversationId: conversation.id,
     });
   }
 
-  function handleNameClick() {
-    setRenameValue(selected?.name ?? '');
-    setIsRenaming(true);
+  function handleIdentityClick() {
+    setDisplayNameValue(conversation.displayName ?? '');
+    setTaglineValue(conversation.tagline ?? '');
+    setAvatarValue(conversation.avatar ?? '');
+    setIsEditingIdentity(true);
   }
 
-  const renameInFlight = useRef(false);
+  async function commitIdentity() {
+    if (!selected || !isEditingIdentity || identitySaveInFlight.current) return;
+    identitySaveInFlight.current = true;
 
-  async function commitRename() {
-    if (!selected || !isRenaming || renameInFlight.current) return;
-    renameInFlight.current = true;
-    const trimmed = renameValue.trim();
-    setIsRenaming(false);
-    if (!trimmed || trimmed === (selected.name ?? '')) {
-      renameInFlight.current = false;
+    const identity = {
+      displayName: displayNameValue.trim() || null,
+      tagline: taglineValue.trim() || null,
+      avatar: avatarValue.trim() || null,
+    };
+    const identityChanged =
+      identity.displayName !== (conversation.displayName ?? null) ||
+      identity.tagline !== (conversation.tagline ?? null) ||
+      identity.avatar !== (conversation.avatar ?? null);
+
+    setIsEditingIdentity(false);
+    if (!identityChanged) {
+      identitySaveInFlight.current = false;
       return;
     }
+
     try {
-      await renameConversation({ conversationId: selected.id, name: trimmed });
-      updateBriefingConversationName({ conversationId: selected.id, name: trimmed });
+      await updateConversationIdentity({ conversationId: conversation.id, identity });
+      updateBriefingConversationIdentity({ conversationId: conversation.id, identity });
       setSaved(true);
       setTimeout(() => setSaved(false), 1500);
     } catch {
-      setRenameValue(trimmed);
-      setIsRenaming(true);
+      setIsEditingIdentity(true);
       requestAnimationFrame(() => {
-        inputRef.current?.focus();
-        inputRef.current?.select();
+        displayNameInputRef.current?.focus();
+        displayNameInputRef.current?.select();
       });
     } finally {
-      renameInFlight.current = false;
+      identitySaveInFlight.current = false;
     }
   }
 
-  function handleRenameKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  function handleIdentityKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') {
       e.preventDefault();
-      void commitRename();
+      void commitIdentity();
     } else if (e.key === 'Escape') {
-      setIsRenaming(false);
+      setIsEditingIdentity(false);
     }
   }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 p-3 border-b border-border-subtle shrink-0">
+      <div className="flex items-center gap-2 border-b border-border-subtle p-3 shrink-0">
         <button
           onClick={clearSelected}
           className="text-sm text-muted hover:text-primary"
         >
           &larr; Back
         </button>
-        {isRenaming ? (
-          <input
-            ref={inputRef}
-            type="text"
-            value={renameValue}
-            onChange={(e) => setRenameValue(e.target.value)}
-            onBlur={() => void commitRename()}
-            onKeyDown={handleRenameKeyDown}
-            className="flex-1 text-sm font-medium text-primary bg-transparent border-b border-border-subtle outline-none truncate min-w-0"
-            aria-label="Rename conversation"
-          />
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-raised text-base">
+          {headerAvatar}
+        </span>
+        {isEditingIdentity ? (
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <input
+              ref={displayNameInputRef}
+              type="text"
+              value={displayNameValue}
+              onChange={(e) => setDisplayNameValue(e.target.value)}
+              onBlur={() => void commitIdentity()}
+              onKeyDown={handleIdentityKeyDown}
+              className="min-w-0 border-b border-border-subtle bg-transparent text-sm font-medium text-primary outline-none"
+              aria-label="Citizen display name"
+              placeholder="Citizen name"
+            />
+            <input
+              type="text"
+              value={taglineValue}
+              onChange={(e) => setTaglineValue(e.target.value)}
+              onBlur={() => void commitIdentity()}
+              onKeyDown={handleIdentityKeyDown}
+              className="min-w-0 border-b border-border-subtle bg-transparent text-xs text-muted outline-none"
+              aria-label="Citizen tagline"
+              placeholder="Tagline"
+            />
+            <input
+              type="text"
+              value={avatarValue}
+              onChange={(e) => setAvatarValue(e.target.value)}
+              onBlur={() => void commitIdentity()}
+              onKeyDown={handleIdentityKeyDown}
+              className="min-w-0 border-b border-border-subtle bg-transparent text-xs text-muted outline-none"
+              aria-label="Citizen avatar"
+              placeholder="Avatar token"
+            />
+          </div>
         ) : (
-          <button
-            onClick={handleNameClick}
-            className="flex-1 text-sm font-medium text-primary truncate text-left hover:opacity-70 transition-opacity min-w-0"
-            title="Tap to rename"
-          >
-            {saved ? '✓' : (selected.name ?? 'Conversation')}
-          </button>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <button
+              onClick={handleIdentityClick}
+              className="truncate text-left text-sm font-medium text-primary transition-opacity hover:opacity-70"
+              title="Edit citizen identity"
+            >
+              {saved ? 'Saved' : headerDisplayName}
+            </button>
+            {conversation.tagline ? (
+              <span className="truncate text-xs text-muted">{conversation.tagline}</span>
+            ) : null}
+          </div>
         )}
-        {/* Copy session ID for `claude --resume <id>` in terminal */}
-        {selected.sessionId && (
+        {conversation.sessionId && (
           <button
             onClick={handleCopySessionId}
-            className="text-xs text-muted hover:text-primary transition-colors px-1.5 py-0.5 rounded border border-border-subtle"
-            title={`Copy session ID: ${selected.sessionId}`}
+            className="rounded border border-border-subtle px-1.5 py-0.5 text-xs text-muted transition-colors hover:text-primary"
+            title={`Copy session ID: ${conversation.sessionId}`}
           >
             {copied ? 'Copied!' : 'Session ID'}
           </button>
@@ -158,15 +199,12 @@ export function ConversationDetail() {
       />
 
       {error ? (
-        <div className="p-3 text-center text-xs text-muted bg-surface border-t border-border-subtle">
+        <div className="border-t border-border-subtle bg-surface p-3 text-center text-xs text-muted">
           {error}
         </div>
       ) : (
         <div className="border-t border-border-subtle">
-          <ChatInput
-            onSubmit={handleSend}
-            disabled={isThisPending || loading}
-          />
+          <ChatInput onSubmit={handleSend} disabled={isThisPending || loading} />
         </div>
       )}
     </div>

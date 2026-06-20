@@ -14,15 +14,19 @@ import type { Message, ConversationListItem } from '@/domain/conversation';
 vi.mock('@/domain/conversation', () => ({
   fetchConversations: vi.fn(),
   fetchConversationMessages: vi.fn(),
+  updateConversationIdentity: vi.fn(),
+  updateConversationName: vi.fn(),
 }));
 
 import {
   fetchConversations as apiFetchConversations,
   fetchConversationMessages as apiFetchMessages,
+  updateConversationIdentity as apiUpdateConversationIdentity,
 } from '@/domain/conversation';
 
 const mockFetchConversations = vi.mocked(apiFetchConversations);
 const mockFetchMessages = vi.mocked(apiFetchMessages);
+const mockUpdateConversationIdentity = vi.mocked(apiUpdateConversationIdentity);
 
 // ---------- fixtures ----------
 
@@ -164,5 +168,43 @@ describe('clearSelectedConversation', () => {
 
     expect(get().selectedConversation).toBeNull();
     expect(get().selectedConversationMessages).toEqual([]);
+  });
+});
+
+describe('updateConversationIdentity', () => {
+  it('syncs identity fields into conversations and selectedConversation', async () => {
+    mockUpdateConversationIdentity.mockResolvedValueOnce({
+      id: 'c-001',
+      displayName: 'Atlas',
+      tagline: 'Night shift citizen',
+      avatar: ':)',
+    });
+
+    const { get, set } = createTestSlice();
+    const conversation = makeConversationListItem();
+    set({
+      conversations: [conversation],
+      selectedConversation: conversation,
+    });
+
+    await get().updateConversationIdentity({
+      conversationId: 'c-001',
+      identity: {
+        displayName: 'Atlas',
+        tagline: 'Night shift citizen',
+        avatar: ':)',
+      },
+    });
+
+    expect(get().conversations[0]).toMatchObject({
+      displayName: 'Atlas',
+      tagline: 'Night shift citizen',
+      avatar: ':)',
+    });
+    expect(get().selectedConversation).toMatchObject({
+      displayName: 'Atlas',
+      tagline: 'Night shift citizen',
+      avatar: ':)',
+    });
   });
 });

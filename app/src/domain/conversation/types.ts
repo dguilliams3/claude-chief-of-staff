@@ -62,6 +62,12 @@ export interface ConversationListItem {
   sessionId: string | null;
   /** Human-readable chat name, set by Claude on first response */
   name: string | null;
+  /** User-curated citizen display name; separate from Claude's auto title */
+  displayName?: string | null;
+  /** Optional one-line citizen byline */
+  tagline?: string | null;
+  /** Optional emoji or identicon token shown as the citizen avatar */
+  avatar?: string | null;
   /** ISO 8601 conversation creation timestamp */
   createdAt: string;
   /** ISO 8601 timestamp of the most recent message, or null for conversations with no messages */
@@ -89,6 +95,12 @@ export interface Conversation {
   sessionId: string | null;
   /** Human-readable chat name, set by Claude on first response */
   name: string | null;
+  /** User-curated citizen display name; separate from Claude's auto title */
+  displayName?: string | null;
+  /** Optional one-line citizen byline */
+  tagline?: string | null;
+  /** Optional emoji or identicon token shown as the citizen avatar */
+  avatar?: string | null;
   /** FK to briefings.id, nullable */
   briefingId: string | null;
   /** ISO 8601 conversation creation timestamp */

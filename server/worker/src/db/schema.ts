@@ -74,6 +74,9 @@ export const conversationsTable = sqliteTable('conversations', {
   sessionId: text('session_id').unique(),
   briefingId: text('briefing_id'),
   name: text('name'),
+  displayName: text('display_name'),
+  tagline: text('tagline'),
+  avatar: text('avatar'),
   createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
 });
 

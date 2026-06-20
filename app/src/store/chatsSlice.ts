@@ -19,8 +19,10 @@ import type { Message, ConversationListItem } from '@/domain/conversation';
 import {
   fetchConversations as apiFetchConversations,
   fetchConversationMessages as apiFetchMessages,
+  updateConversationIdentity as apiUpdateConversationIdentity,
   updateConversationName as apiUpdateConversationName,
 } from '@/domain/conversation';
+import type { ConversationIdentityUpdate } from '@/domain/conversation';
 
 export interface ChatsSlice {
   /** All conversations for the Chats tab list */
@@ -41,6 +43,10 @@ export interface ChatsSlice {
   selectConversation: (options: { conversation: ConversationListItem | null }) => Promise<void>;
   clearSelectedConversation: () => void;
   renameConversation: (opts: { conversationId: string; name: string }) => Promise<void>;
+  updateConversationIdentity: (opts: {
+    conversationId: string;
+    identity: ConversationIdentityUpdate;
+  }) => Promise<void>;
 }
 
 type StoreGet = () => ChatsSlice;
@@ -125,6 +131,37 @@ export function createChatsSlice(set: StoreSet, get: StoreGet): ChatsSlice {
       });
       // Note: briefingConversations sync is handled by ConversationDetail calling
       // updateBriefingConversationName separately (cross-slice constraint).
+    },
+
+    async updateConversationIdentity({
+      conversationId,
+      identity,
+    }: {
+      conversationId: string;
+      identity: ConversationIdentityUpdate;
+    }) {
+      const updated = await apiUpdateConversationIdentity({ conversationId, identity });
+      const current = get();
+      set({
+        conversations: current.conversations.map((conversation) =>
+          conversation.id === conversationId
+            ? {
+                ...conversation,
+                displayName: updated.displayName ?? null,
+                tagline: updated.tagline ?? null,
+                avatar: updated.avatar ?? null,
+              }
+            : conversation
+        ),
+        selectedConversation: current.selectedConversation?.id === conversationId
+          ? {
+              ...current.selectedConversation,
+              displayName: updated.displayName ?? null,
+              tagline: updated.tagline ?? null,
+              avatar: updated.avatar ?? null,
+            }
+          : current.selectedConversation,
+      });
     },
   };
 }

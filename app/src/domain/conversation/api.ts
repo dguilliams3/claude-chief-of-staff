@@ -202,6 +202,12 @@ export async function createConversation({ briefingId }: {
   return res.json() as Promise<ConversationListItem>;
 }
 
+export interface ConversationIdentityUpdate {
+  displayName?: string | null;
+  tagline?: string | null;
+  avatar?: string | null;
+}
+
 /**
  * Updates a conversation's display name.
  *
@@ -228,4 +234,26 @@ export async function updateConversationName({ conversationId, name }: {
   );
   if (!res.ok) throw new ConversationError(`API error: ${res.status}`, codeFromStatus(res.status), res.status);
   return res.json() as Promise<{ id: string; name: string }>;
+}
+
+/**
+ * Updates a conversation's user-curated identity fields.
+ */
+export async function updateConversationIdentity({
+  conversationId,
+  identity,
+}: {
+  conversationId: string;
+  identity: ConversationIdentityUpdate;
+}): Promise<{ id: string; displayName?: string | null; tagline?: string | null; avatar?: string | null }> {
+  const res = await fetch(
+    `${API_BASE}/conversations/${encodeURIComponent(conversationId)}`,
+    {
+      method: 'PATCH',
+      headers: headers(),
+      body: JSON.stringify(identity),
+    },
+  );
+  if (!res.ok) throw new ConversationError(`API error: ${res.status}`, codeFromStatus(res.status), res.status);
+  return res.json() as Promise<{ id: string; displayName?: string | null; tagline?: string | null; avatar?: string | null }>;
 }
