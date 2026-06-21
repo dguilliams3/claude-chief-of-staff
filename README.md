@@ -52,7 +52,7 @@ The `/setup-instance` skill walks you through the full provisioning, or you can 
 | Prompts | TypeScript component composition (`agent/prompts/`) |
 | Local API | Hono on Node (port 3141) |
 | Cloud API | Hono on Cloudflare Workers |
-| Storage | Cloudflare D1 (SQLite, Drizzle ORM) |
+| Storage | Cloudflare D1 (SQLite, Drizzle schema plus migrations and drift check; raw SQL queries) |
 | Frontend | Vite + React + Tailwind v4 (PWA) |
 | Tunnel | cloudflared (localhost ↔ Cloudflare) |
 | Auth | Bearer token (CF secret + local env var) |
