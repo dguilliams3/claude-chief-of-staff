@@ -3,9 +3,9 @@ import {
   copyFileSync,
   mkdtempSync,
   mkdirSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
+import { rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
@@ -21,9 +21,9 @@ const literalOrg = ["Astral", "Insights"].join(" ");
 const literalDomain = ["dan", "guilliams.com"].join("");
 const literalUuid = ["5ec470d1-cb13-4775", "93ec-7d68bd41c7aa"].join("-");
 
-afterEach(() => {
+afterEach(async () => {
   for (const dir of tempDirs.splice(0)) {
-    rmSync(dir, { recursive: true, force: true });
+    await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 });
 
