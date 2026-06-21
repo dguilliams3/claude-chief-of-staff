@@ -12,7 +12,7 @@
  * Used by: `server/local/domain/conversation/index.ts` (barrel)
  * Used by: `server/local/server.ts` -- mounted at `/briefings` (legacy path kept for tunnel compat)
  * See also: `server/local/domain/conversation/followUpQueue.ts` -- async job queue
- * See also: `worker/src/domain/conversation/proxy.ts` -- Worker that proxies here
+ * See also: `server/worker/src/domain/conversation/proxy.ts` -- Worker that proxies here
  * Coupling: `app/src/domain/conversation/types.ts` -- FollowUpResponse / FollowUpJobStatus
  * Do NOT: Change the HTTP paths -- Worker proxy hardcodes `/briefings/follow-up`
  */
@@ -46,7 +46,7 @@ const COS_TOKEN = process.env.COS_TOKEN ?? '';
  * deduplicates if both push and poll succeed.
  *
  * Upstream: fire-and-forget call in POST /follow-up handler below
- * Downstream: `worker/src/domain/conversation/proxy.ts::POST /internal/follow-up-complete`
+ * Downstream: `server/worker/src/domain/conversation/proxy.ts::POST /internal/follow-up-complete`
  */
 async function pushCompletionToWorker(job: {
   id: string;
@@ -132,7 +132,7 @@ export function createClaudeRoutes() {
    * - **Resume** (sessionId provided): resumes an existing Claude session
    * - **New session** (newSession:true, no sessionId): starts a fresh Claude session
    *
-   * Upstream: `worker/src/domain/conversation/proxy.ts` — follow-up proxy handler
+   * Upstream: `server/worker/src/domain/conversation/proxy.ts` — follow-up proxy handler
    * Downstream: `agent/claude-cli.ts` — callClaude / buildClaudeArgs
    * Downstream: `server/local/domain/conversation/followUpQueue.ts` — job lifecycle
    */
@@ -270,3 +270,5 @@ export function createClaudeRoutes() {
 
   return app;
 }
+
+

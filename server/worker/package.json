@@ -5,6 +5,11 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "db:generate": "drizzle-kit generate",
+    "db:check": "node ./scripts/check-drizzle-sync.mjs",
+    "db:check:meta": "drizzle-kit check",
+    "db:migrate": "wrangler d1 migrations apply DB --local",
+    "db:studio": "drizzle-kit studio",
     "test": "vitest run"
   },
   "dependencies": {

@@ -5,7 +5,7 @@
  * stored per-session in D1 and surfaced in the UI to show context window
  * consumption for the current briefing.
  *
- * Coupling: `worker/src/db/schema.ts::sessions` — D1 column shape
+ * Coupling: `server/worker/src/db/schema.ts::sessions` — D1 column shape
  * Coupling: `app/src/domain/briefing/types.ts::Briefing` — tokenUsage field
  * See also: `app/src/domain/session/api.ts` — HTTP client for session endpoints
  */
@@ -16,7 +16,7 @@
  * Populated by the briefing sync route from `briefing.usage` fields.
  * Used in the AppHeader meta row to display `29K/1M` context window usage.
  *
- * Coupling: `worker/src/domain/session/routes.ts` — API response shape
+ * Coupling: `server/worker/src/domain/session/routes.ts` — API response shape
  * See also: `app/src/components/AppHeader/AppHeader.tsx` — renders token indicator
  */
 export interface SessionTokenUsage {
@@ -33,7 +33,7 @@ export interface SessionTokenUsage {
 /**
  * Full session object returned by `GET /sessions/:id`.
  *
- * Coupling: `worker/src/domain/session/routes.ts` — must match API response shape
+ * Coupling: `server/worker/src/domain/session/routes.ts` — must match API response shape
  * See also: `app/src/domain/session/api.ts` — HTTP client
  */
 export interface Session {
@@ -48,3 +48,6 @@ export interface Session {
   /** ISO 8601 timestamp of the last briefing generated in this session */
   briefingGeneratedAt?: string | null;
 }
+
+
+

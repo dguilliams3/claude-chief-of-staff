@@ -126,7 +126,7 @@ export async function fetchFollowUpStatus({ jobId, conversationId, briefingId, i
  * @throws On network error or non-200 response
  *
  * Upstream: `app/src/store/conversationSlice.ts::fetchConversations`
- * Downstream: Worker `GET /conversations` → D1 INNER JOIN aggregate query
+ * Downstream: Worker `GET /conversations` → D1 LEFT JOIN aggregate query
  */
 export async function fetchConversations(): Promise<ConversationListItem[]> {
   const res = await fetch(`${API_BASE}/conversations`, { headers: headers() });
@@ -257,3 +257,5 @@ export async function updateConversationIdentity({
   if (!res.ok) throw new ConversationError(`API error: ${res.status}`, codeFromStatus(res.status), res.status);
   return res.json() as Promise<{ id: string; displayName?: string | null; tagline?: string | null; avatar?: string | null }>;
 }
+
+

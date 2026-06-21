@@ -9,7 +9,7 @@
  * Upstream: `app/src/store/index.ts` — called after login/auto-login success
  * Downstream: Worker `GET /push/vapid-public-key` — fetches VAPID key
  * Downstream: Worker `POST /push/subscribe` — stores subscription in D1
- * See also: `worker/src/domain/push/routes.ts` — server-side endpoints
+ * See also: `server/worker/src/domain/push/routes.ts` — server-side endpoints
  * See also: `app/src/sw.ts` — handles the push events this subscription receives
  * Do NOT: Call before service worker is registered — guard with navigator.serviceWorker.ready
  */
@@ -154,3 +154,5 @@ export async function subscribeToPush(
     return false;
   }
 }
+
+

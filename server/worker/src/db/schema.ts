@@ -71,8 +71,8 @@ export const sessions = sqliteTable('sessions', {
  */
 export const conversationsTable = sqliteTable('conversations', {
   id: text('id').primaryKey(),
-  sessionId: text('session_id').unique(),
-  briefingId: text('briefing_id'),
+  sessionId: text('session_id').unique().references(() => sessions.id),
+  briefingId: text('briefing_id').references(() => briefings.id),
   name: text('name'),
   displayName: text('display_name'),
   tagline: text('tagline'),
@@ -93,7 +93,7 @@ export const conversationsTable = sqliteTable('conversations', {
  */
 export const briefingSections = sqliteTable('briefing_sections', {
   id: text('id').primaryKey(),
-  briefingId: text('briefing_id').notNull(),
+  briefingId: text('briefing_id').notNull().references(() => briefings.id),
   sectionKey: text('section_key').notNull(),
   label: text('label').notNull(),
   severity: text('severity').notNull().default('info'),
@@ -139,7 +139,7 @@ export const pushSubscriptions = sqliteTable('push_subscriptions', {
  */
 export const messages = sqliteTable('messages', {
   id: text('id').primaryKey(),
-  conversationId: text('conversation_id').notNull(),
+  conversationId: text('conversation_id').notNull().references(() => conversationsTable.id),
   role: text('role').notNull(),
   content: text('content').notNull(),
   createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
@@ -160,7 +160,7 @@ export const messages = sqliteTable('messages', {
  */
 export const exports = sqliteTable('exports', {
   id: text('id').primaryKey(),
-  briefingId: text('briefing_id').notNull(),
+  briefingId: text('briefing_id').notNull().references(() => briefings.id),
   exportType: text('export_type').notNull().default('pdf'),
   exportedAt: text('exported_at').notNull().default(sql`(datetime('now'))`),
   metadataJson: text('metadata_json'),
