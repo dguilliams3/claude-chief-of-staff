@@ -1,10 +1,19 @@
 # Claude Chief of Staff
 
-Personal AI briefing system — operational briefings + field intelligence, powered by Claude Code.
+A personal AI platform where every conversation is a persistent, named entity: its own display name, avatar, and one-line tagline, backed by a durable, append-only history you can always return to. A headless Claude Code agent and a mobile-first PWA sit on top, and AI briefings are the first app built on the platform, not the whole of it.
 
-## What It Does
+_Most chat tools treat a conversation as a disposable exchange. Here, a new chat is something you name, give a face, and come back to, with its history kept permanent._
 
-A headless agent runner generates structured morning briefings (work synthesis from Jira, Fireflies, MS365) and field intelligence (LLM/agent landscape monitoring). Briefings are stored in Cloudflare D1 and served through a mobile-first PWA.
+`[screenshot / short GIF of the named conversations goes here]`
+
+## What it is
+
+Two layers:
+
+- **The conversation platform:** every chat is a durable record with its own identity (name, avatar, tagline) and an append-only message history (no edits, no deletes). Conversations persist, resume, and are browsable as first-class objects, each rendered with its identity in the chat list and the conversation header.
+- **The first app, AI briefings:** a headless `claude --print` agent generates structured morning briefings (Jira, Fireflies, and MS365 synthesis) and field intelligence (LLM and agent landscape monitoring), stored in Cloudflare D1 and served through the PWA.
+
+The briefings showcase the platform. The durable, identity-bearing conversation layer is the foundation everything else is built on.
 
 ## Distribution Model
 
