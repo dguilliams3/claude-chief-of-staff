@@ -5,7 +5,7 @@
  * and returned by the Worker API. Changes here must be mirrored in the
  * Worker route handlers and D1 schema.
  *
- * Coupling: `worker/src/routes/briefings.ts` — Worker returns these shapes
+ * Coupling: `server/worker/src/domain/briefing/routes.ts` — Worker returns these shapes
  * Coupling: `app/src/store/briefingSlice.ts` — store holds `Record<string, Briefing>`
  * See also: `app/src/domain/briefing/api.ts` — HTTP client that fetches these types
  * See also: `app/src/domain/session/types.ts::SessionTokenUsage` — token usage shape
@@ -27,7 +27,7 @@ export type Severity = 'info' | 'warn' | 'flag';
 /**
  * A single section within a briefing (e.g., "This Week", "Untracked Commitments").
  *
- * Coupling: `worker/src/routes/briefings.ts` — stored as JSON array in D1 `sections` column
+ * Coupling: `server/worker/src/domain/briefing/routes.ts` — stored as JSON array in D1 `sections` column
  * See also: `app/src/components/SectionCard/SectionCard.tsx` — renders one of these per card
  */
 export interface BriefingSection {
@@ -64,7 +64,7 @@ export interface BriefingMetadata {
  * Full briefing object with all sections and metadata.
  * This is the complete shape stored in D1 and returned by `GET /briefings/:id`.
  *
- * Coupling: `worker/src/routes/briefings.ts` — must match D1 row shape
+ * Coupling: `server/worker/src/domain/briefing/routes.ts` — must match D1 row shape
  * Coupling: `app/src/store/briefingSlice.ts` — `briefings` state holds `Record<string, Briefing>`
  * See also: `app/src/domain/briefing/types.ts::BriefingListItem` — lightweight list variant
  */
@@ -96,7 +96,7 @@ export interface Briefing {
  * Lightweight briefing list item returned by `GET /briefings`.
  * Intentionally excludes sections and sessionId to reduce payload size.
  *
- * Coupling: `worker/src/routes/briefings.ts` — must match D1 query projection
+ * Coupling: `server/worker/src/domain/briefing/routes.ts` — must match D1 query projection
  * See also: `app/src/domain/briefing/types.ts::Briefing` — full object shape
  */
 export interface BriefingListItem {
@@ -113,3 +113,5 @@ export interface BriefingListItem {
   /** Sequential briefing counter for this type */
   briefingNumber: number | null;
 }
+
+

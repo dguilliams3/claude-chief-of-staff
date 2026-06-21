@@ -46,7 +46,7 @@ interface ActiveTrigger {
  *
  * Coupling: `app/src/components/AppHeader/SessionDropdown.tsx` — writes this via setSessionMode
  * Coupling: `agent/run-briefing.ts` — interprets the sessionId forwarded by the Worker
- * See also: `worker/src/domain/session/routes.ts` — session list used to populate the dropdown
+ * See also: `server/worker/src/domain/session/routes.ts` — session list used to populate the dropdown
  */
 export type SessionMode =
   | { type: "new" }
@@ -304,3 +304,5 @@ export function createBriefingSlice(
     },
   };
 }
+
+

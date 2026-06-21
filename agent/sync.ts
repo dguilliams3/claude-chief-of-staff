@@ -5,7 +5,7 @@
  * Requires COS_TOKEN env var; skips silently if unset.
  *
  * Used by: `agent/run-briefing.ts` — called after local file write
- * See also: `worker/src/` — the Worker endpoint that receives the sync POST
+ * See also: `server/worker/src/` — the Worker endpoint that receives the sync POST
  */
 import { logger } from './logger';
 
@@ -49,3 +49,5 @@ export async function syncToD1({ briefing }: { briefing: object }): Promise<void
     logger.warn({ err }, 'D1 sync failed (non-fatal)');
   }
 }
+
+

@@ -5,8 +5,8 @@
  * and returned by the Worker conversation API endpoints. Changes here
  * must be mirrored in the Worker route handlers and D1 schema.
  *
- * Coupling: `worker/src/routes/conversations.ts` -- Worker returns these shapes
- * Coupling: `worker/src/routes/conversation-persistence.ts` -- Worker writes these shapes
+ * Coupling: `server/worker/src/domain/conversation/routes.ts` -- Worker returns these shapes
+ * Coupling: `server/worker/src/domain/conversation/persistence.ts` -- Worker writes these shapes
  * Coupling: `app/src/store/index.ts` -- store holds conversation state
  * See also: `app/src/domain/conversation/api.ts` -- HTTP client that fetches these types
  * See also: `app/src/domain/briefing/types.ts` -- sibling type file for briefing data
@@ -16,8 +16,8 @@
  * Message role -- string literal union, not enum.
  * Matches D1 CHECK(role IN ('user','assistant')) constraint.
  *
- * Coupling: `worker/src/db/schema.ts` -- CHECK constraint
- * Coupling: `worker/src/routes/conversation-persistence.ts` -- inserts with these values
+ * Coupling: `server/worker/src/db/schema.ts` -- CHECK constraint
+ * Coupling: `server/worker/src/domain/conversation/persistence.ts` -- inserts with these values
  */
 export type MessageRole = 'user' | 'assistant';
 
@@ -27,7 +27,7 @@ export type MessageRole = 'user' | 'assistant';
  *
  * STABLE CONTRACT -- changes must be mirrored in Worker route handlers.
  *
- * Coupling: `worker/src/routes/conversations.ts` -- produces this shape
+ * Coupling: `server/worker/src/domain/conversation/routes.ts` -- produces this shape
  * Coupling: `app/src/store/index.ts` -- store holds Message[]
  */
 export interface Message {
@@ -46,11 +46,12 @@ export interface Message {
 /**
  * Lightweight conversation list item for the Chats tab.
  * Returned by GET /conversations. Includes computed aggregates.
- * lastMessageAt is non-nullable because INNER JOIN guarantees messages exist.
+ * lastMessageAt is nullable because the Worker uses LEFT JOIN and blank conversations
+ * can exist before any messages are sent.
  *
  * STABLE CONTRACT -- changes must be mirrored in Worker route handlers.
  *
- * Coupling: `worker/src/routes/conversations.ts` -- SQL projection produces this
+ * Coupling: `server/worker/src/domain/conversation/routes.ts` -- SQL projection produces this
  * Coupling: `app/src/views/ChatsView/ChatsView.tsx` -- renders list of these
  */
 export interface ConversationListItem {
@@ -113,7 +114,7 @@ export interface Conversation {
  * The Worker persists the user message and returns a jobId for polling.
  * The assistant response arrives later via GET /follow-up/status/:jobId.
  *
- * Coupling: `worker/src/routes/proxy.ts` — produces this shape
+ * Coupling: `server/worker/src/domain/conversation/proxy.ts` — produces this shape
  * Coupling: `app/src/domain/conversation/api.ts::sendFollowUp` — returns this type
  */
 export interface FollowUpResponse {
@@ -137,7 +138,7 @@ export interface FollowUpResponse {
  * When status is 'completed', includes the assistant's response and
  * metadata for D1 reconciliation.
  *
- * Coupling: `worker/src/routes/proxy.ts` — GET /follow-up/status/:jobId
+ * Coupling: `server/worker/src/domain/conversation/proxy.ts` — GET /follow-up/status/:jobId
  * Coupling: `app/src/domain/conversation/api.ts::fetchFollowUpStatus` — returns this type
  */
 export interface FollowUpJobStatus {
@@ -156,3 +157,5 @@ export interface FollowUpJobStatus {
   /** Error message (only when failed) */
   error?: string;
 }
+
+

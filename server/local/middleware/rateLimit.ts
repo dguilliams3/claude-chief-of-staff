@@ -30,7 +30,7 @@ import type { Context, MiddlewareHandler, Next } from 'hono';
  * is the first consumer — it parses the body to extract the session identifier.
  *
  * Coupling: `server/local/domain/conversation/routes.ts::POST /follow-up` — must match
- * See also: `worker/src/domain/conversation/proxy.ts` — the upstream that assembles this body
+ * See also: `server/worker/src/domain/conversation/proxy.ts` — the upstream that assembles this body
  */
 export interface FollowUpRequestBody {
   sessionId?: string;
@@ -161,3 +161,5 @@ export function createFollowUpRateLimit(getActiveJobCount: () => number): Middle
     }
   };
 }
+
+

@@ -14,7 +14,7 @@
 /**
  * Parsed token usage from a Claude CLI JSON response.
  *
- * Coupling: `worker/src/domain/session/routes.ts::PATCH /sessions/:id/usage` — must match field names sent in body
+ * Coupling: `server/worker/src/domain/session/routes.ts::PATCH /sessions/:id/usage` — must match field names sent in body
  * See also: `app/src/domain/session/types.ts::SessionTokenUsage` — PWA-side representation (camelCase)
  */
 export interface CliUsage {
@@ -63,3 +63,5 @@ export function parseCliUsage(jsonOutput: string): CliUsage | null {
     return null;
   }
 }
+
+

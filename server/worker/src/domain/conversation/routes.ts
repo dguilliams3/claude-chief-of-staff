@@ -186,11 +186,12 @@ conversations.get('/by-briefing/:briefingId', async (c) => {
  * Creates a blank conversation (no session yet).
  *
  * Session is assigned lazily on first message via the follow-up proxy.
- * If briefingId is provided, uses INSERT OR IGNORE to respect UNIQUE constraint
- * and returns the existing conversation if one already exists for that briefing.
+ * If briefingId is provided, the new conversation is linked to that briefing.
+ * Migration 0003 removed the UNIQUE constraint on briefing_id, so this route
+ * always creates a fresh conversation row.
  *
  * @param briefingId - Optional briefing ID to associate
- * @returns New or existing conversation object
+ * @returns Newly created conversation object
  *
  * Upstream: PWA new-chat UI
  * Downstream: `persistence.ts::createBlankConversation`
@@ -270,15 +271,18 @@ conversations.patch('/:id', async (c) => {
     }
 
     if (hasDisplayName || hasTagline || hasAvatar) {
-      const identity = {
-        displayName: hasDisplayName ? normalizeIdentityField(body.displayName) : null,
-        tagline: hasTagline ? normalizeIdentityField(body.tagline) : null,
-        avatar: hasAvatar ? normalizeIdentityField(body.avatar) : null,
-      };
+      const identity: {
+        displayName?: string | null;
+        tagline?: string | null;
+        avatar?: string | null;
+      } = {};
+      if (hasDisplayName) identity.displayName = normalizeIdentityField(body.displayName);
+      if (hasTagline) identity.tagline = normalizeIdentityField(body.tagline);
+      if (hasAvatar) identity.avatar = normalizeIdentityField(body.avatar);
       updates.push(updateConversationIdentity(c.env.DB, conversationId, identity));
-      if (hasDisplayName) response.displayName = identity.displayName;
-      if (hasTagline) response.tagline = identity.tagline;
-      if (hasAvatar) response.avatar = identity.avatar;
+      if (hasDisplayName) response.displayName = identity.displayName ?? null;
+      if (hasTagline) response.tagline = identity.tagline ?? null;
+      if (hasAvatar) response.avatar = identity.avatar ?? null;
     }
 
     if (updates.length === 0) {
