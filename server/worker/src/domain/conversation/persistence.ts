@@ -246,8 +246,10 @@ export async function ensureConversation(
 /**
  * Creates a blank conversation with no session yet (session assigned on first message).
  *
- * If briefingId is provided, uses INSERT OR IGNORE to respect the UNIQUE constraint
- * on briefing_id, then re-SELECTs to return the actual row (may be pre-existing).
+ * If briefingId is provided, associates the new conversation with that briefing.
+ * Migration 0003 removed the UNIQUE constraint on briefing_id, so this path
+ * always inserts a fresh conversation row even when other conversations already
+ * reference the same briefing.
  * If no briefingId, always creates a new standalone conversation.
  *
  * @param db - D1 database binding

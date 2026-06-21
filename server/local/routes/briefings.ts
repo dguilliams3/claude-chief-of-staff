@@ -5,7 +5,7 @@
  * groups by type, and returns the most recent briefing per type.
  *
  * Used by: `server/local/server.ts` — mounted at `/briefings`
- * See also: `server/worker/src/routes/briefings.ts` — cloud equivalent that reads from D1
+ * See also: `server/worker/src/domain/briefing/routes.ts` — cloud equivalent that reads from D1
  * Do NOT: Write to the briefings directory from these routes — read-only system
  */
 import { Hono } from 'hono';
@@ -45,3 +45,5 @@ export function createBriefingRoutes({ briefingsDir }: { briefingsDir: string })
 
   return app;
 }
+
+

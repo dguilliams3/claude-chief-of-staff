@@ -9,7 +9,7 @@
  *
  * Used by: Browser runtime — registered automatically by vite-plugin-pwa
  * See also: `app/src/lib/push/subscribe.ts` — registers the subscription with the server
- * See also: `worker/src/domain/push/send.ts` — sends pushes to this SW
+ * See also: `server/worker/src/domain/push/send.ts` — sends pushes to this SW
  * Do NOT: Import from @/store or React modules — service workers run outside the React context
  */
 /// <reference lib="webworker" />
@@ -88,3 +88,5 @@ self.addEventListener('notificationclick', (event) => {
     }),
   );
 });
+
+
