@@ -7,7 +7,7 @@
  *
  * Upstream: `app/src/domain/conversation/api.ts` — thrown on non-OK follow-up responses
  * Upstream: `app/src/store/conversationSlice.ts` — caught in sendFollowUp action
- * Coupling: `worker/src/routes/proxy.ts` — error response shape includes `code` field
+ * Coupling: `server/worker/src/domain/conversation/proxy.ts` — error response shape includes `code` field
  * See also: `app/src/lib/errors/BaseError.ts` — parent class
  * Tested by: `app/src/domain/conversation/errors/FollowUpError.test.ts`
  */
@@ -52,3 +52,5 @@ export class FollowUpError extends BaseError {
     this.userMessage = userMessage;
   }
 }
+
+

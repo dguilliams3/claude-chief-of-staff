@@ -40,7 +40,7 @@ export function createBriefingTriggerRoutes() {
    * Accepts optional `sessionId` to resume an existing Claude session instead
    * of starting fresh. When omitted, behaves as before (newSession: true).
    *
-   * Upstream: `worker/src/domain/conversation/proxy.ts` — trigger proxy handler
+   * Upstream: `server/worker/src/domain/conversation/proxy.ts` — trigger proxy handler
    * Downstream: `agent/run-briefing.ts::runBriefing`
    * Downstream: `server/local/domain/briefing/triggerQueue.ts::enqueueJob`
    */
@@ -98,3 +98,5 @@ export function createBriefingTriggerRoutes() {
 
   return app;
 }
+
+

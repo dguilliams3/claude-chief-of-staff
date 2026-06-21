@@ -5,7 +5,7 @@
  * via cloudflared tunnel.
  *
  * Used by: Cloudflare Worker (via tunnel proxy for trigger/follow-up)
- * See also: `worker/src/` — cloud Worker that proxies to this server via tunnel
+ * See also: `server/worker/src/` — cloud Worker that proxies to this server via tunnel
  * See also: `./routes/briefings` — filesystem briefing reads
  * See also: `./routes/claude` — claude CLI shell-out routes
  * Do NOT: Use `taskkill /F /IM node.exe` to stop — kills all Node including Claude Code.
@@ -52,3 +52,5 @@ app.route('/briefings', createClaudeRoutes());
 const port = parseInt(process.env.COS_PORT || '3141', 10);
 console.log(`API listening on http://0.0.0.0:${port}`);
 serve({ fetch: app.fetch, port, hostname: '0.0.0.0' });
+
+

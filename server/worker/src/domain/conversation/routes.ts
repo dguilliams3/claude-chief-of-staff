@@ -186,11 +186,12 @@ conversations.get('/by-briefing/:briefingId', async (c) => {
  * Creates a blank conversation (no session yet).
  *
  * Session is assigned lazily on first message via the follow-up proxy.
- * If briefingId is provided, uses INSERT OR IGNORE to respect UNIQUE constraint
- * and returns the existing conversation if one already exists for that briefing.
+ * If briefingId is provided, the new conversation is linked to that briefing.
+ * Migration 0003 removed the UNIQUE constraint on briefing_id, so this route
+ * always creates a fresh conversation row.
  *
  * @param briefingId - Optional briefing ID to associate
- * @returns New or existing conversation object
+ * @returns Newly created conversation object
  *
  * Upstream: PWA new-chat UI
  * Downstream: `persistence.ts::createBlankConversation`

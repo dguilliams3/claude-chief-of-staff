@@ -7,7 +7,7 @@
  *
  * Used by: `app/src/store/index.ts` — called after auth alongside subscribeToPush
  * See also: `app/src/lib/push/subscribe.ts` — the actual subscribe flow
- * See also: `worker/src/domain/push/send.ts` — server-side 410/404 cleanup
+ * See also: `server/worker/src/domain/push/send.ts` — server-side 410/404 cleanup
  * Do NOT: Run on an interval — call once on app load, not in setInterval
  */
 
@@ -108,3 +108,5 @@ export async function checkAndRenewPushSubscription(): Promise<boolean> {
     return false;
   }
 }
+
+
