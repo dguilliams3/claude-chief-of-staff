@@ -43,6 +43,12 @@ export interface ConversationIdentity {
   avatar: string | null;
 }
 
+export interface ConversationIdentityUpdate {
+  displayName?: string | null;
+  tagline?: string | null;
+  avatar?: string | null;
+}
+
 /**
  * Persists a user message to D1 BEFORE proxying to the tunnel.
  *
@@ -377,7 +383,7 @@ export function prepareUpdateConversationName(
 export async function updateConversationIdentity(
   db: D1Database,
   conversationId: string,
-  identity: ConversationIdentity,
+  identity: ConversationIdentityUpdate,
 ): Promise<void> {
   await prepareUpdateConversationIdentity(db, conversationId, identity).run();
 }
@@ -388,13 +394,35 @@ export async function updateConversationIdentity(
 export function prepareUpdateConversationIdentity(
   db: D1Database,
   conversationId: string,
-  identity: ConversationIdentity,
+  identity: ConversationIdentityUpdate,
 ): D1PreparedStatement {
+  const assignments: string[] = [];
+  const values: Array<string | null> = [];
+
+  if (Object.hasOwn(identity, 'displayName')) {
+    assignments.push('display_name = ?');
+    values.push(identity.displayName ?? null);
+  }
+
+  if (Object.hasOwn(identity, 'tagline')) {
+    assignments.push('tagline = ?');
+    values.push(identity.tagline ?? null);
+  }
+
+  if (Object.hasOwn(identity, 'avatar')) {
+    assignments.push('avatar = ?');
+    values.push(identity.avatar ?? null);
+  }
+
+  if (assignments.length === 0) {
+    throw new Error('prepareUpdateConversationIdentity requires at least one field');
+  }
+
   return db.prepare(
     `UPDATE conversations
-     SET display_name = ?, tagline = ?, avatar = ?
+     SET ${assignments.join(', ')}
      WHERE id = ?`
-  ).bind(identity.displayName, identity.tagline, identity.avatar, conversationId);
+  ).bind(...values, conversationId);
 }
 
 /**
