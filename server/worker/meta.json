@@ -1,0 +1,123 @@
+{
+  "inputs": {
+    "src/domain/conversation/persistence.ts": {
+      "bytes": 14685,
+      "imports": [],
+      "format": "esm"
+    },
+    "src/domain/push/routes.ts": {
+      "bytes": 3502,
+      "imports": [
+        {
+          "path": "hono",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "src/domain/push/send.ts": {
+      "bytes": 4056,
+      "imports": [
+        {
+          "path": "@block65/webcrypto-web-push",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "src/domain/push/index.ts": {
+      "bytes": 371,
+      "imports": [
+        {
+          "path": "src/domain/push/routes.ts",
+          "kind": "import-statement",
+          "original": "./routes"
+        },
+        {
+          "path": "src/domain/push/send.ts",
+          "kind": "import-statement",
+          "original": "./send"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../shared/briefing-types.json": {
+      "bytes": 172,
+      "imports": []
+    },
+    "src/domain/briefing/routes.ts": {
+      "bytes": 17666,
+      "imports": [
+        {
+          "path": "hono",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "src/domain/conversation/persistence.ts",
+          "kind": "import-statement",
+          "original": "../conversation/persistence"
+        },
+        {
+          "path": "src/domain/push/index.ts",
+          "kind": "import-statement",
+          "original": "../push"
+        },
+        {
+          "path": "../../shared/briefing-types.json",
+          "kind": "import-statement",
+          "original": "../../../../../shared/briefing-types.json"
+        }
+      ],
+      "format": "esm"
+    }
+  },
+  "outputs": {
+    "nul": {
+      "imports": [
+        {
+          "path": "hono",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "hono",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@block65/webcrypto-web-push",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "exports": [
+        "briefings"
+      ],
+      "entryPoint": "src/domain/briefing/routes.ts",
+      "inputs": {
+        "src/domain/briefing/routes.ts": {
+          "bytesInOutput": 9412
+        },
+        "src/domain/conversation/persistence.ts": {
+          "bytesInOutput": 359
+        },
+        "src/domain/push/routes.ts": {
+          "bytesInOutput": 1589
+        },
+        "src/domain/push/index.ts": {
+          "bytesInOutput": 0
+        },
+        "src/domain/push/send.ts": {
+          "bytesInOutput": 2019
+        },
+        "../../shared/briefing-types.json": {
+          "bytesInOutput": 186
+        }
+      },
+      "bytes": 13794
+    }
+  }
+}

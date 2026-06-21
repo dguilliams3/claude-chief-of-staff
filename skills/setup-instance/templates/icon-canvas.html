@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Icon Canvas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #111; color: #e0e0e0; }
+    .icon-stage {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 8px; padding: 1rem;
+    }
+    .icon-label { font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .icon-container {
+      border-radius: 20%; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .size-192 { width: 192px; height: 192px; }
+    .size-512 { width: 256px; height: 256px; }
+    .size-favicon { width: 32px; height: 32px; border-radius: 6px; }
+    .size-apple { width: 180px; height: 180px; }
+    .mockup-row { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; align-items: flex-end; }
+    .phone-mockup {
+      width: 200px; border: 2px solid #333; border-radius: 24px;
+      padding: 12px 8px; background: #1a1a1a;
+    }
+    .phone-screen { background: #222; border-radius: 12px; padding: 8px; }
+    .phone-status { font-size: 9px; color: #666; text-align: center; margin-bottom: 6px; }
+    .phone-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .phone-icon {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .phone-icon-img { width: 40px; height: 40px; border-radius: 10px; }
+    .phone-icon-label { font-size: 7px; color: #aaa; }
+    .browser-mockup {
+      width: 300px; border: 2px solid #333; border-radius: 8px;
+      overflow: hidden; background: #1a1a1a;
+    }
+    .browser-bar {
+      background: #2a2a2a; padding: 6px 10px;
+      display: flex; align-items: center; gap: 8px; font-size: 10px; color: #888;
+    }
+    .browser-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .browser-url { background: #333; border-radius: 4px; padding: 2px 8px; flex: 1; }
+    .browser-content { padding: 12px; }
+  </style>
+</head>
+<body class="min-h-screen p-6">
+  <div class="max-w-3xl mx-auto">
+    <h1 class="text-2xl font-bold mb-2 text-center">Icon Preview</h1>
+    <p class="text-sm text-center mb-8" style="color: #888">Your app icon at every size it will appear.</p>
+
+    <!-- Raw icon sizes -->
+    <div class="mockup-row mb-12">
+      <div class="icon-stage">
+        <div class="icon-container size-512" style="background: {{ICON_BG_COLOR}}">
+          {{ICON_SVG_512}}
+        </div>
+        <div class="icon-label">512 x 512</div>
+      </div>
+      <div class="icon-stage">
+        <div class="icon-container size-192" style="background: {{ICON_BG_COLOR}}">
+          {{ICON_SVG_192}}
+        </div>
+        <div class="icon-label">192 x 192</div>
+      </div>
+      <div class="icon-stage">
+        <div class="icon-container size-apple" style="background: {{ICON_BG_COLOR}}">
+          {{ICON_SVG_180}}
+        </div>
+        <div class="icon-label">180 x 180 (Apple Touch)</div>
+      </div>
+      <div class="icon-stage">
+        <div class="icon-container size-favicon" style="background: {{ICON_BG_COLOR}}">
+          {{ICON_SVG_32}}
+        </div>
+        <div class="icon-label">32 x 32 (Favicon)</div>
+      </div>
+    </div>
+
+    <!-- Phone home screen mockup -->
+    <h2 class="text-lg font-semibold mb-4 text-center">Home Screen</h2>
+    <div class="mockup-row mb-12">
+      <div class="phone-mockup">
+        <div class="phone-screen">
+          <div class="phone-status">9:41</div>
+          <div class="phone-grid">
+            <div class="phone-icon">
+              <div class="phone-icon-img" style="background: #3b82f6"></div>
+              <span class="phone-icon-label">Mail</span>
+            </div>
+            <div class="phone-icon">
+              <div class="phone-icon-img" style="background: #22c55e"></div>
+              <span class="phone-icon-label">Messages</span>
+            </div>
+            <div class="phone-icon">
+              <div class="phone-icon-img" style="background: #ef4444"></div>
+              <span class="phone-icon-label">Calendar</span>
+            </div>
+            <div class="phone-icon">
+              <div class="phone-icon-img" style="background: {{ICON_BG_COLOR}}; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 4px;">
+                {{ICON_SVG_40}}
+              </div>
+              <span class="phone-icon-label">{{SHORT_NAME}}</span>
+            </div>
+            <div class="phone-icon">
+              <div class="phone-icon-img" style="background: #6366f1"></div>
+              <span class="phone-icon-label">Notes</span>
+            </div>
+            <div class="phone-icon">
+              <div class="phone-icon-img" style="background: #f59e0b"></div>
+              <span class="phone-icon-label">Photos</span>
+            </div>
+            <div class="phone-icon">
+              <div class="phone-icon-img" style="background: #8b5cf6"></div>
+              <span class="phone-icon-label">Music</span>
+            </div>
+            <div class="phone-icon">
+              <div class="phone-icon-img" style="background: #64748b"></div>
+              <span class="phone-icon-label">Settings</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Browser tab mockup -->
+    <h2 class="text-lg font-semibold mb-4 text-center">Browser Tab</h2>
+    <div class="mockup-row mb-8">
+      <div class="browser-mockup">
+        <div class="browser-bar">
+          <div class="browser-dot" style="background: #ef4444"></div>
+          <div class="browser-dot" style="background: #f59e0b"></div>
+          <div class="browser-dot" style="background: #22c55e"></div>
+          <div class="browser-url">
+            <span style="display: inline-flex; align-items: center; gap: 4px;">
+              <span style="display: inline-block; width: 12px; height: 12px; background: {{ICON_BG_COLOR}}; border-radius: 2px; overflow: hidden;">{{ICON_SVG_12}}</span>
+              {{DASHBOARD_URL}}
+            </span>
+          </div>
+        </div>
+        <div class="browser-content" style="background: {{SURFACE_COLOR}}">
+          <div style="font-size: 13px; font-weight: 600; color: {{TEXT_PRIMARY_COLOR}}; margin-bottom: 8px;">{{INSTANCE_NAME}}</div>
+          <div style="background: {{SURFACE_CARD_COLOR}}; border-radius: 6px; padding: 8px; font-size: 11px; color: {{TEXT_SECONDARY_COLOR}}; border-left: 3px solid {{ACCENT_COLOR}};">
+            Good morning. Three meetings today...
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

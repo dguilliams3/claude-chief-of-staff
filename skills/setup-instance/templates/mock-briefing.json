@@ -1,0 +1,54 @@
+{
+  "id": "b7e2a1c4-3f8d-4a9e-b5c1-d2e4f6a8b0c2",
+  "type": "work",
+  "generatedAt": "2026-03-10T13:30:00Z",
+  "sessionId": "e1d2c3b4-a5f6-4e7d-8c9b-0a1b2c3d4e5f",
+  "sections": [
+    {
+      "key": "GOOD_MORNING",
+      "label": "Good Morning",
+      "content": "**Monday, March 10, 2026 — 8:30 AM**\n\nThree meetings on the calendar today. The sprint review from Friday surfaced two blockers that need your attention, and the data pipeline team shipped their schema migration over the weekend. Quiet inbox — six unread, nothing on fire.\n\nLet's get into it.",
+      "severity": "info"
+    },
+    {
+      "key": "CLIENT_HEAT_MAP",
+      "label": "Client Activity (Last 7 Days)",
+      "content": "| Client | Signal | Status |\n|--------|--------|--------|\n| **Acme Corp** | 45min review Friday, 3 attendees | POC scope finalized. Waiting on sample data from their QA lead. Follow-up scheduled Wednesday. |\n| **Globex Industries** | Two standups this week | Sprint velocity tracking well. Demo to stakeholders Thursday. |\n| **Initech** | Kickoff Monday (today) | New engagement. SOW signed last week. First data drop expected by EOD. |\n| **Umbrella Ltd** | No activity | Last touch was 2/28. May need a check-in ping this week. |",
+      "severity": "info"
+    },
+    {
+      "key": "YOUR_ACTION_ITEMS",
+      "label": "Untracked Commitments",
+      "content": "These came out of meetings but have no corresponding tickets:\n\n1. **Send revised timeline to Acme** — from Friday's review. They asked for updated milestones by Tuesday.\n2. **Review PR #247** — teammate asked in standup Thursday. Still open.\n3. **Share dashboard access with new team member** — mentioned in 1:1, no ticket created.\n4. **Prepare talking points for Thursday demo** — Globex stakeholder presentation.\n\nItems 1 and 4 are time-sensitive.",
+      "severity": "flag"
+    },
+    {
+      "key": "TICKET_STATUS",
+      "label": "Ticket Reality Check",
+      "content": "**What actually moved (last 7 days):**\n- `PROJ-142` — API rate limiting implementation -> **In Progress** (confirmed in standup)\n- `PROJ-138` — Fix CSV export encoding -> **Done** (merged Friday)\n- `PROJ-145` — Add retry logic to webhook handler -> **Ready For Test**\n\n**Flags:**\n- `PROJ-129` — *\"Dashboard loading slow on mobile\"* — **High priority, unassigned.** Mentioned in sprint review but no owner yet.\n- `PROJ-131` — *\"Auth token refresh race condition\"* — **Critical, stuck in code review for 5 days.** Needs attention.\n\n**Stale:** 8 tickets in \"In Progress\" with no updates since February. Likely need a backlog sweep.",
+      "severity": "warn"
+    },
+    {
+      "key": "YOUR_BUILDS",
+      "label": "What You Shipped",
+      "content": "**Project Alpha** (this week)\n- Deployed schema migration v3 to staging\n- Added integration tests for the new webhook flow\n- Fixed edge case in date parsing for timezone-aware queries\n- 4 commits merged, 1 PR open\n\n**Internal tooling**\n- Updated CI pipeline to cache dependencies (build time down 40%)\n- Added health check endpoint to monitoring service",
+      "severity": "info"
+    },
+    {
+      "key": "TODAY_PRIORITIES",
+      "label": "Suggested Priorities",
+      "content": "1. **Assign PROJ-129** (mobile performance) — it came up in sprint review, don't let it drift.\n2. **Unblock PR #247** — quick review, teammate is waiting.\n3. **Initech kickoff prep** — meeting is today. Review the SOW one more time.\n4. **Send Acme timeline** — due tomorrow, better to get ahead of it.\n5. **Check in on Umbrella Ltd** — radio silence for 10 days is unusual.",
+      "severity": "info"
+    }
+  ],
+  "metadata": {
+    "sourcesSampled": [
+      "jira",
+      "calendar"
+    ],
+    "runDurationMs": 142350,
+    "costUsd": 0.28,
+    "sessionResumed": false,
+    "briefingNumber": 12
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "lib": ["ESNext"],
+    "types": ["@cloudflare/workers-types"],
+    // skipLibCheck: drizzle-orm 0.45.x ships broken .d.ts for drivers we don't use (mysql2, gel, pg).
+    // All errors are inside node_modules/drizzle-orm/, not our code. Required on TS 5.9+.
+    // Do NOT use skipLibCheck elsewhere as a bandaid for type errors in our own code.
+    "skipLibCheck": true
+  }
+}
