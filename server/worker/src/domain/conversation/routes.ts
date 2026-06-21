@@ -270,15 +270,18 @@ conversations.patch('/:id', async (c) => {
     }
 
     if (hasDisplayName || hasTagline || hasAvatar) {
-      const identity = {
-        displayName: hasDisplayName ? normalizeIdentityField(body.displayName) : null,
-        tagline: hasTagline ? normalizeIdentityField(body.tagline) : null,
-        avatar: hasAvatar ? normalizeIdentityField(body.avatar) : null,
-      };
+      const identity: {
+        displayName?: string | null;
+        tagline?: string | null;
+        avatar?: string | null;
+      } = {};
+      if (hasDisplayName) identity.displayName = normalizeIdentityField(body.displayName);
+      if (hasTagline) identity.tagline = normalizeIdentityField(body.tagline);
+      if (hasAvatar) identity.avatar = normalizeIdentityField(body.avatar);
       updates.push(updateConversationIdentity(c.env.DB, conversationId, identity));
-      if (hasDisplayName) response.displayName = identity.displayName;
-      if (hasTagline) response.tagline = identity.tagline;
-      if (hasAvatar) response.avatar = identity.avatar;
+      if (hasDisplayName) response.displayName = identity.displayName ?? null;
+      if (hasTagline) response.tagline = identity.tagline ?? null;
+      if (hasAvatar) response.avatar = identity.avatar ?? null;
     }
 
     if (updates.length === 0) {
