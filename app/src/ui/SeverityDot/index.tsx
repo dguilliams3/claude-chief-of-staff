@@ -1,0 +1,1 @@
+export { SeverityDot } from './SeverityDot';

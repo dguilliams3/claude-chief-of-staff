@@ -1,0 +1,21 @@
+{
+  "name": "server-local",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx server.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.0.4",
+    "agent": "*",
+    "dotenv": "^17.4.2",
+    "hono": "^4.12.25",
+    "pino": "^10.3.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.22.4",
+    "vitest": "^4.1.8"
+  }
+}

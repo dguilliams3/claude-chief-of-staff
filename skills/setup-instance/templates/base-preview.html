@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{INSTANCE_NAME}} — Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            surface: {
+              DEFAULT: '{{SURFACE_COLOR}}',
+              card: '{{SURFACE_CARD_COLOR}}',
+              hover: '{{SURFACE_HOVER_COLOR}}',
+            },
+            accent: {
+              DEFAULT: '{{ACCENT_COLOR}}',
+              muted: '{{ACCENT_MUTED_COLOR}}',
+            },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background: {{SURFACE_COLOR}}; color: {{TEXT_PRIMARY_COLOR}}; }
+    .card { background: {{SURFACE_CARD_COLOR}}; border-radius: 12px; padding: 1.25rem; margin-bottom: 0.75rem; }
+    .severity-info { border-left: 3px solid {{SEVERITY_INFO_COLOR}}; }
+    .severity-flag { border-left: 3px solid {{SEVERITY_FLAG_COLOR}}; }
+    .severity-warn { border-left: 3px solid {{SEVERITY_WARN_COLOR}}; }
+    .header-bar { background: {{SURFACE_CARD_COLOR}}; }
+  </style>
+</head>
+<body class="min-h-screen font-sans">
+  <!-- Top header -->
+  <div class="header-bar px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+    <div class="text-lg font-semibold" style="color: {{TEXT_PRIMARY_COLOR}}">{{INSTANCE_NAME}}</div>
+    <div class="text-sm" style="color: {{TEXT_MUTED_COLOR}}">Preview</div>
+  </div>
+
+  <!-- Tab bar -->
+  <div class="header-bar border-t px-4 py-2 flex gap-4 text-sm" style="border-color: {{SURFACE_HOVER_COLOR}}">
+    <button class="font-medium pb-1" style="color: {{ACCENT_COLOR}}; border-bottom: 2px solid {{ACCENT_COLOR}}">Work</button>
+    <button class="pb-1" style="color: {{TEXT_MUTED_COLOR}}">Field</button>
+    <button class="pb-1" style="color: {{TEXT_MUTED_COLOR}}">Chats</button>
+  </div>
+
+  <!-- Content area -->
+  <div class="px-4 py-4 max-w-2xl mx-auto">
+    <!-- Briefing card: info severity -->
+    <div class="card severity-info">
+      <div class="text-sm font-semibold mb-2" style="color: {{TEXT_PRIMARY_COLOR}}">Good Morning</div>
+      <p class="text-sm leading-relaxed" style="color: {{TEXT_SECONDARY_COLOR}}">
+        <strong>Monday, March 10, 2026 — 8:30 AM</strong><br><br>
+        Three meetings on the calendar today. The sprint review surfaced two blockers
+        that need your attention. Quiet inbox — nothing on fire.<br><br>
+        Let's get into it.
+      </p>
+    </div>
+
+    <!-- Briefing card: flag severity -->
+    <div class="card severity-flag">
+      <div class="text-sm font-semibold mb-2" style="color: {{TEXT_PRIMARY_COLOR}}">Untracked Commitments</div>
+      <p class="text-sm leading-relaxed" style="color: {{TEXT_SECONDARY_COLOR}}">
+        These came out of meetings but have no corresponding tickets:<br><br>
+        1. <strong>Send revised timeline to client</strong> — due Tuesday.<br>
+        2. <strong>Review PR #247</strong> — teammate waiting since Thursday.<br>
+        3. <strong>Prepare talking points for demo</strong> — stakeholder presentation Thursday.
+      </p>
+    </div>
+
+    <!-- Briefing card: warn severity -->
+    <div class="card severity-warn">
+      <div class="text-sm font-semibold mb-2" style="color: {{TEXT_PRIMARY_COLOR}}">Ticket Reality Check</div>
+      <p class="text-sm leading-relaxed" style="color: {{TEXT_SECONDARY_COLOR}}">
+        <strong>Flags:</strong><br>
+        PROJ-129 — <em>"Dashboard loading slow on mobile"</em> — High priority, unassigned.<br>
+        PROJ-131 — <em>"Auth token refresh race condition"</em> — Critical, stuck in review 5 days.<br><br>
+        <strong>Stale:</strong> 8 tickets in "In Progress" with no updates since last month.
+      </p>
+    </div>
+
+    <!-- Briefing card: info severity -->
+    <div class="card severity-info">
+      <div class="text-sm font-semibold mb-2" style="color: {{TEXT_PRIMARY_COLOR}}">Suggested Priorities</div>
+      <p class="text-sm leading-relaxed" style="color: {{TEXT_SECONDARY_COLOR}}">
+        1. Assign PROJ-129 — don't let it drift unassigned.<br>
+        2. Unblock PR #247 — quick review.<br>
+        3. Kickoff prep — review the SOW.<br>
+        4. Send client timeline — due tomorrow.
+      </p>
+    </div>
+  </div>
+
+  <!-- Follow-up bar -->
+  <div class="fixed bottom-0 left-0 right-0 px-4 py-3" style="background: {{SURFACE_CARD_COLOR}}; border-top: 1px solid {{SURFACE_HOVER_COLOR}}">
+    <div class="max-w-2xl mx-auto flex gap-2">
+      <input type="text" placeholder="Ask a follow-up..." class="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
+        style="background: {{SURFACE_COLOR}}; color: {{TEXT_PRIMARY_COLOR}}; border: 1px solid {{SURFACE_HOVER_COLOR}}">
+      <button class="px-4 py-2 rounded-lg text-sm font-medium" style="background: {{ACCENT_COLOR}}; color: {{SURFACE_COLOR}}">Send</button>
+    </div>
+  </div>
+</body>
+</html>
