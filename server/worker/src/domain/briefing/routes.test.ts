@@ -14,11 +14,19 @@ type BriefingRow = {
 class FakeBriefingDb {
   readonly rows: BriefingRow[] = [
     {
-      id: 'briefing-2',
+      id: 'briefing-3',
       type: 'news',
+      generated_at: '2026-06-22T14:00:00Z',
+      session_id: 'session-3',
+      sections_json: JSON.stringify([{ key: 'n2', label: 'News', content: 'Latest', severity: 'warn' }]),
+      metadata_json: JSON.stringify({ briefingNumber: 3 }),
+    },
+    {
+      id: 'briefing-2',
+      type: 'community',
       generated_at: '2026-06-21T14:00:00Z',
       session_id: 'session-2',
-      sections_json: JSON.stringify([{ key: 'n1', label: 'News', content: 'Fresh', severity: 'warn' }]),
+      sections_json: JSON.stringify([{ key: 'c1', label: 'Community', content: 'Middle', severity: 'info' }]),
       metadata_json: JSON.stringify({ briefingNumber: 2 }),
     },
     {
@@ -74,7 +82,7 @@ describe('briefing route ETags', () => {
     expect(first.status).toBe(200);
     const etag = first.headers.get('ETag');
     expect(etag).toBeTruthy();
-    await expect(first.json()).resolves.toHaveLength(2);
+    await expect(first.json()).resolves.toHaveLength(3);
 
     const second = await briefings.request(
       '/',
@@ -91,7 +99,7 @@ describe('briefing route ETags', () => {
     const first = await briefings.request('/briefing-2', {}, env);
     expect(first.status).toBe(200);
     const etag = first.headers.get('ETag');
-    expect(etag).toBe('"briefing:briefing-2:2026-06-21T14:00:00Z"');
+    expect(etag).toMatch(/^"briefing:briefing-2:/);
 
     const second = await briefings.request(
       '/briefing-2',
@@ -100,5 +108,45 @@ describe('briefing route ETags', () => {
     );
     expect(second.status).toBe(304);
     expect(second.headers.get('ETag')).toBe(etag);
+  });
+
+  it('changes the history-list ETag when a non-boundary row changes', async () => {
+    const db = new FakeBriefingDb();
+    const env = { DB: db } as unknown as Env;
+
+    const first = await briefings.request('/', {}, env);
+    const firstEtag = first.headers.get('ETag');
+
+    db.rows[1] = {
+      ...db.rows[1],
+      metadata_json: JSON.stringify({ briefingNumber: 22 }),
+    };
+
+    const second = await briefings.request('/', {}, env);
+    const secondEtag = second.headers.get('ETag');
+
+    expect(firstEtag).toBeTruthy();
+    expect(secondEtag).toBeTruthy();
+    expect(secondEtag).not.toBe(firstEtag);
+  });
+
+  it('changes the detail ETag when the returned payload changes without changing the timestamp', async () => {
+    const db = new FakeBriefingDb();
+    const env = { DB: db } as unknown as Env;
+
+    const first = await briefings.request('/briefing-2', {}, env);
+    const firstEtag = first.headers.get('ETag');
+
+    db.rows[1] = {
+      ...db.rows[1],
+      sections_json: JSON.stringify([{ key: 'c1', label: 'Community', content: 'Updated', severity: 'warn' }]),
+    };
+
+    const second = await briefings.request('/briefing-2', {}, env);
+    const secondEtag = second.headers.get('ETag');
+
+    expect(firstEtag).toBeTruthy();
+    expect(secondEtag).toBeTruthy();
+    expect(secondEtag).not.toBe(firstEtag);
   });
 });
