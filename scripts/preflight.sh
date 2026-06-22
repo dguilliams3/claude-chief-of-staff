@@ -54,7 +54,7 @@ fi
 # --- Local override structure ------------------------------------------------
 
 if [[ ! -d local ]]; then
-  WARNINGS+=("local/ directory not found — no per-instance overrides will load. Run /setup-instance Phase 7 to configure.")
+  WARNINGS+=("local/ directory not found — no per-instance overrides will load. Run /setup-instance Phase 8 to configure.")
 fi
 
 # Feeds check — community briefings need local/feeds.json

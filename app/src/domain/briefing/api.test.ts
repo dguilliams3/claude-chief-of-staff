@@ -20,6 +20,7 @@ import {
   BriefingError,
 } from '@/domain/briefing';
 import type { Briefing, BriefingListItem } from '@/domain/briefing';
+import { resetBriefingApiCacheForTests } from './api';
 
 // ---------- helpers ----------
 
@@ -69,6 +70,7 @@ let fetchSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
   fetchSpy = vi.spyOn(globalThis, 'fetch');
   setAuthToken(''); // reset between tests
+  resetBriefingApiCacheForTests();
 });
 
 afterEach(() => {
@@ -199,6 +201,35 @@ describe('fetchBriefingList', () => {
     fetchSpy.mockResolvedValueOnce(errorResponse(401));
     await expect(fetchBriefingList()).rejects.toThrow(BriefingError);
   });
+
+  it('reuses cached list data on 304 with a stored ETag', async () => {
+    fetchSpy
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([mockListItem]), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', ETag: '"history-v1"' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 304,
+          headers: { ETag: '"history-v1"' },
+        }),
+      );
+
+    const first = await fetchBriefingList();
+    const second = await fetchBriefingList();
+
+    expect(first).toEqual([mockListItem]);
+    expect(second).toEqual([mockListItem]);
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      `${API_BASE}/briefings`,
+      expect.objectContaining({
+        headers: expect.objectContaining({ 'If-None-Match': '"history-v1"' }),
+      }),
+    );
+  });
 });
 
 // ============================================================
@@ -222,6 +253,35 @@ describe('fetchBriefingById', () => {
   it('throws BriefingError with NOT_FOUND on 404', async () => {
     fetchSpy.mockResolvedValueOnce(errorResponse(404));
     await expect(fetchBriefingById({ id: 'missing' })).rejects.toThrow(BriefingError);
+  });
+
+  it('reuses cached briefing detail on 304 with a stored ETag', async () => {
+    fetchSpy
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(mockBriefing), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', ETag: '"briefing-b-001"' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 304,
+          headers: { ETag: '"briefing-b-001"' },
+        }),
+      );
+
+    const first = await fetchBriefingById({ id: 'b-001' });
+    const second = await fetchBriefingById({ id: 'b-001' });
+
+    expect(first).toEqual(mockBriefing);
+    expect(second).toEqual(mockBriefing);
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      `${API_BASE}/briefings/b-001`,
+      expect.objectContaining({
+        headers: expect.objectContaining({ 'If-None-Match': '"briefing-b-001"' }),
+      }),
+    );
   });
 });
 
