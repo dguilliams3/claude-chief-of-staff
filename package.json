@@ -17,6 +17,6 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   }
 }

@@ -15,12 +15,12 @@
   "dependencies": {
     "@block65/webcrypto-web-push": "^1.0.2",
     "drizzle-orm": "^0.45.1",
-    "hono": "^4.12.25"
+    "hono": "^4.12.26"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260615.1",
+    "@cloudflare/workers-types": "^4.20260621.1",
     "drizzle-kit": "^0.31.9",
-    "vitest": "^4.1.8",
-    "wrangler": "^4.100.0"
+    "vitest": "^4.1.9",
+    "wrangler": "^4.103.0"
   }
 }
