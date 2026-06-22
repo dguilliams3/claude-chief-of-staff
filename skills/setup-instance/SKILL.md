@@ -5,7 +5,7 @@ description: Use when setting up a new instance for the first time, when a user 
 
 # Setup Instance — Interactive Wizard
 
-This skill walks a new user from zero to a fully deployed, customized instance. It covers infrastructure, data sources, deployment, prompt tuning, and visual design.
+This skill walks a new user from zero to a fully deployed, customized instance. It covers infrastructure, push notifications, data sources, deployment, prompt tuning, and visual design.
 
 ## Ground Rules
 
@@ -236,7 +236,48 @@ _Goal: Create a cloudflared tunnel so the local API is reachable from the Worker
 
 ---
 
-## Phase 4: MCP Server Configuration
+## Phase 4: Push Notifications
+
+_Goal: Configure VAPID keys so browser push works on a fresh install._
+
+1. Read `setup-run/setup-log.md` for the Worker name and chosen domain.
+
+2. Generate a VAPID keypair:
+   ```
+   npx web-push generate-vapid-keys
+   ```
+   Capture the `publicKey` and `privateKey` from the output.
+
+3. Choose a VAPID subject. Use a `mailto:` address you control or an `https://` URL for your site:
+   ```
+   mailto:you@example.com
+   ```
+
+4. Edit `server/worker/wrangler.toml` and add these `[vars]` entries alongside `TUNNEL_URL`:
+   ```
+   VAPID_PUBLIC_KEY = "<publicKey>"
+   VAPID_SUBJECT = "mailto:you@example.com"
+   ```
+
+5. Set the Worker secret for the private key:
+   ```
+   cd server/worker && wrangler secret put VAPID_PRIVATE_KEY
+   ```
+   Paste the generated private key when prompted.
+
+6. Append to `setup-run/setup-log.md`:
+
+```markdown
+## Phase 4: Push Notifications
+- VAPID keypair generated: OK
+- VAPID public key added to wrangler.toml: OK
+- VAPID subject set: <mailto-or-https-subject>
+- VAPID private key secret set: OK
+```
+
+---
+
+## Phase 5: MCP Server Configuration
 
 _Goal: Connect Claude Code to the user's selected data sources via MCP._
 
@@ -290,14 +331,14 @@ _Goal: Connect Claude Code to the user's selected data sources via MCP._
 5. Append to `setup-run/setup-log.md`:
 
 ```markdown
-## Phase 4: MCP Servers
+## Phase 5: MCP Servers
 - Configured: <list of server names>
 - Verification: all servers responding
 ```
 
 ---
 
-## Phase 5: Environment & Deploy
+## Phase 6: Environment & Deploy
 
 _Goal: Write env config, deploy Worker and frontend._
 
@@ -338,7 +379,7 @@ _Goal: Write env config, deploy Worker and frontend._
 7. Append to `setup-run/setup-log.md`:
 
 ```markdown
-## Phase 5: Deployment
+## Phase 6: Deployment
 - Worker URL: <worker-url>
 - Frontend URL: <pages-url>
 - .env written: OK
@@ -346,7 +387,7 @@ _Goal: Write env config, deploy Worker and frontend._
 
 ---
 
-## Phase 6: Validation
+## Phase 7: Validation
 
 _Goal: Verify the full stack works end-to-end._
 
@@ -382,7 +423,7 @@ _Goal: Verify the full stack works end-to-end._
 7. Append to `setup-run/setup-log.md`:
 
 ```markdown
-## Phase 6: Validation
+## Phase 7: Validation
 - Worker health: OK
 - Test briefing generated: OK
 - Briefing synced to D1: OK
@@ -391,7 +432,7 @@ _Goal: Verify the full stack works end-to-end._
 
 ---
 
-## Phase 7: Prompt Customization
+## Phase 8: Prompt Customization
 
 _Goal: Tailor briefing prompts to the user's work and interests. All customizations are written to the gitignored `local/` directory — never modify tracked prompt files._
 
@@ -510,7 +551,7 @@ _Goal: Tailor briefing prompts to the user's work and interests. All customizati
 11. Append to `setup-run/setup-log.md`:
 
 ```markdown
-## Phase 7: Prompt Customization
+## Phase 8: Prompt Customization
 - Persona written: local/persona.md
 - Work focus written: local/briefings/work-focus.md
 - News focus written: local/briefings/news-focus.md
@@ -524,7 +565,7 @@ _Goal: Tailor briefing prompts to the user's work and interests. All customizati
 
 ---
 
-## Phase 8: Visual Customization
+## Phase 9: Visual Customization
 
 _Goal: Let the user choose palette, layout, and icons for their dashboard. Design iteration happens inline — preview HTMLs are generated and opened in the browser. All customizations are written to the gitignored `local/` directory._
 
@@ -603,7 +644,7 @@ _Goal: Let the user choose palette, layout, and icons for their dashboard. Desig
 15. Append to `setup-run/setup-log.md`:
 
 ```markdown
-## Phase 8: Visual Customization
+## Phase 9: Visual Customization
 - Palette: <chosen palette name or "defaults"> → local/theme.css
 - PWA identity: <chosen name or "defaults"> → local/pwa.json
 - Icon: <chosen icon or "defaults">
@@ -615,7 +656,7 @@ _Goal: Let the user choose palette, layout, and icons for their dashboard. Desig
 
 ---
 
-## Phase 9: Completion
+## Phase 10: Completion
 
 _Goal: Summarize everything and leave the user with a clear picture of their system._
 
@@ -670,7 +711,7 @@ _Goal: Summarize everything and leave the user with a clear picture of their sys
 4. Append completion to `setup-run/setup-log.md`:
 
 ```markdown
-## Phase 9: Completion
+## Phase 10: Completion
 - Config summary saved: setup-run/final/config-summary.json
 - Completed: <timestamp>
 ```

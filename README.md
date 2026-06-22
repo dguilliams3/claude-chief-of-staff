@@ -162,7 +162,7 @@ This repo ships opinionated tooling so forks stay maintainable:
 
 - **`CLAUDE.md`** — Full project reference: architecture, conventions, quick reference
 - **`local/README.md`** — Override file formats and examples
-- **`skills/setup-instance/SKILL.md`** — What the setup wizard does (9 phases)
+- **`skills/setup-instance/SKILL.md`** - What the setup wizard does (10 phases)
 - **`docs/MCP_SUBAGENT_STRATEGY.md`** — How the agent uses Sonnet subagents for MCP tool calls (context isolation pattern)
 - **`docs/COUNCIL_GUIDE.md`** — Multi-model planning sessions (Claude + Codex + Gemini)
 - **`docs/COMPONENT_CONVENTION.md`** — Three-tier component architecture (views / components / ui)
