@@ -10,10 +10,11 @@
  * Do NOT: Cache selected briefings client-side -- always re-fetch to ensure freshness
  */
 import { useEffect } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Download } from 'lucide-react';
 import { useStore } from '@/store';
 import { BriefingList } from '@/components/BriefingList';
 import { SectionCard } from '@/components/SectionCard';
+import { generateAndDownloadPdf } from '@/lib/export';
 
 /**
  * Renders a browsable history of past briefings. Switches between list mode
@@ -51,19 +52,31 @@ export function HistoryView() {
     return (
       <div className="flex flex-col min-h-[calc(100dvh-80px)]">
         <div className="px-5 pt-4 pb-2">
-          <button
-            onClick={() => selectBriefing({ id: null })}
-            className="flex items-center gap-1.5 text-sm text-muted hover:text-primary transition-colors mb-3"
-          >
-            <ArrowLeft size={16} />
-            <span>Back to list</span>
-          </button>
-          <h2 className="font-body font-semibold text-lg text-primary">
-            {selectedBriefing.type} briefing
-          </h2>
-          <p className="font-mono text-xs text-muted mt-1">
-            {new Date(selectedBriefing.generatedAt).toLocaleString()}
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <button
+                onClick={() => selectBriefing({ id: null })}
+                className="flex items-center gap-1.5 text-sm text-muted hover:text-primary transition-colors mb-3"
+              >
+                <ArrowLeft size={16} />
+                <span>Back to list</span>
+              </button>
+              <h2 className="font-body font-semibold text-lg text-primary">
+                {selectedBriefing.type} briefing
+              </h2>
+              <p className="font-mono text-xs text-muted mt-1">
+                {new Date(selectedBriefing.generatedAt).toLocaleString()}
+              </p>
+            </div>
+            <button
+              onClick={() => void generateAndDownloadPdf(selectedBriefing)}
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-card border border-border-subtle px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-muted transition-colors hover:text-accent"
+              aria-label="Download this briefing as a PDF"
+            >
+              <Download size={13} />
+              <span>PDF</span>
+            </button>
+          </div>
         </div>
         <main className="flex-1 px-4 py-4 space-y-4 max-w-2xl mx-auto w-full">
           {selectedBriefing.sections.map((section, i) => (
