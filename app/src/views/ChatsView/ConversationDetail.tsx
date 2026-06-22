@@ -162,7 +162,7 @@ export function ConversationDetail() {
               onKeyDown={handleIdentityKeyDown}
               className="min-w-0 border-b border-border-subtle bg-transparent text-xs text-muted outline-none"
               aria-label="Citizen avatar"
-              placeholder="Avatar token"
+              placeholder="e.g. 🤖"
             />
           </div>
         ) : (

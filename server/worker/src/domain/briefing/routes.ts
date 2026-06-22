@@ -9,7 +9,7 @@
  * See also: `server/worker/src/domain/conversation/proxy.ts` — tunnel proxy routes mounted on the same prefix
  * Do NOT: Return raw D1 column names — always map to camelCase for the PWA contract
  */
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import type { Env } from '../../types';
 import { ensureConversation } from '../conversation/persistence';
 import { sendPushToAll, computeSeveritySummary } from '../push';
@@ -21,6 +21,15 @@ const briefings = new Hono<{ Bindings: Env }>();
 function safeJsonParse(json: string, fallback: unknown = null): unknown {
   try { return JSON.parse(json); }
   catch { console.error('Malformed JSON in D1 row:', json.slice(0, 100)); return fallback; }
+}
+
+function applyCacheHeaders(c: Context<{ Bindings: Env }>, etag: string) {
+  c.header('ETag', etag);
+  c.header('Cache-Control', 'private, max-age=0, must-revalidate');
+}
+
+function matchesIfNoneMatch(requestEtag: string | undefined, currentEtag: string): boolean {
+  return requestEtag === currentEtag;
 }
 
 /**
@@ -87,7 +96,7 @@ briefings.get('/latest', async (c) => {
  *
  * @returns Array of briefing summary objects, camelCase fields
  *
- * Upstream: `app/src/domain/briefing/api.ts` — History tab list view [PLANNED — not yet wired]
+ * Upstream: `app/src/domain/briefing/api.ts` — History tab list view
  * Downstream: D1 `briefings` table — `SELECT ... ORDER BY generated_at DESC LIMIT 50`
  * Do NOT: Return full sections/metadata here — use GET /:id for that
  */
@@ -112,6 +121,14 @@ briefings.get('/', async (c) => {
       briefingNumber: meta.briefingNumber ?? null,
     };
   });
+
+  const first = items[0];
+  const last = items[items.length - 1];
+  const etag = `"briefings:${items.length}:${first?.id ?? 'none'}:${first?.generatedAt ?? 'none'}:${last?.id ?? 'none'}"`;
+  applyCacheHeaders(c, etag);
+  if (matchesIfNoneMatch(c.req.header('if-none-match'), etag)) {
+    return c.body(null, 304);
+  }
 
   return c.json(items);
 });
@@ -237,7 +254,7 @@ briefings.get('/types', (c) => {
  * @param id - Route param: briefing UUID
  * @returns Full Briefing object (camelCase fields) or 404 if not found
  *
- * Upstream: `app/src/domain/briefing/api.ts` — History detail view [PLANNED — not yet wired]
+ * Upstream: `app/src/domain/briefing/api.ts` — History detail view
  * Downstream: D1 `briefings` table — `SELECT * WHERE id = ?`
  */
 briefings.get('/:id', async (c) => {
@@ -249,6 +266,11 @@ briefings.get('/:id', async (c) => {
   if (!row) return c.json({ error: 'Not found' }, 404);
 
   const r = row as Record<string, string>;
+  const etag = `"briefing:${r.id}:${r.generated_at}"`;
+  applyCacheHeaders(c, etag);
+  if (matchesIfNoneMatch(c.req.header('if-none-match'), etag)) {
+    return c.body(null, 304);
+  }
   return c.json({
     id: r.id,
     type: r.type,

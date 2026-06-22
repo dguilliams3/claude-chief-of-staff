@@ -15,6 +15,14 @@ import type { Briefing, BriefingListItem } from './types';
 import { BriefingError } from './errors';
 import type { BriefingErrorCode } from './errors';
 
+type CachedBriefingResponse<T> = {
+  etag: string;
+  data: T;
+};
+
+let briefingListCache: CachedBriefingResponse<BriefingListItem[]> | null = null;
+const briefingDetailCache = new Map<string, CachedBriefingResponse<Briefing>>();
+
 /** Maps HTTP status codes to BriefingErrorCode for structured error handling. */
 function codeFromStatus(status: number): BriefingErrorCode {
   if (status === 401 || status === 403) return 'UNAUTHORIZED';
@@ -101,9 +109,17 @@ export async function fetchTriggerStatus({ jobId, signal }: { jobId: string; sig
  * Downstream: Worker `GET /briefings` → D1 query
  */
 export async function fetchBriefingList(): Promise<BriefingListItem[]> {
-  const res = await fetch(`${API_BASE}/briefings`, { headers: headers() });
+  const requestHeaders = {
+    ...headers(),
+    ...(briefingListCache ? { 'If-None-Match': briefingListCache.etag } : {}),
+  };
+  const res = await fetch(`${API_BASE}/briefings`, { headers: requestHeaders });
+  if (res.status === 304 && briefingListCache) return briefingListCache.data;
   if (!res.ok) throw new BriefingError(`API error: ${res.status}`, codeFromStatus(res.status), res.status);
-  return res.json() as Promise<BriefingListItem[]>;
+  const data = await res.json() as BriefingListItem[];
+  const etag = res.headers.get('ETag');
+  if (etag) briefingListCache = { etag, data };
+  return data;
 }
 
 /**
@@ -118,9 +134,18 @@ export async function fetchBriefingList(): Promise<BriefingListItem[]> {
  * Downstream: Worker `GET /briefings/:id` → D1 query
  */
 export async function fetchBriefingById({ id }: { id: string }): Promise<Briefing> {
-  const res = await fetch(`${API_BASE}/briefings/${encodeURIComponent(id)}`, { headers: headers() });
+  const cached = briefingDetailCache.get(id);
+  const requestHeaders = {
+    ...headers(),
+    ...(cached ? { 'If-None-Match': cached.etag } : {}),
+  };
+  const res = await fetch(`${API_BASE}/briefings/${encodeURIComponent(id)}`, { headers: requestHeaders });
+  if (res.status === 304 && cached) return cached.data;
   if (!res.ok) throw new BriefingError(`API error: ${res.status}`, codeFromStatus(res.status), res.status);
-  return res.json() as Promise<Briefing>;
+  const data = await res.json() as Briefing;
+  const etag = res.headers.get('ETag');
+  if (etag) briefingDetailCache.set(id, { etag, data });
+  return data;
 }
 
 /**
@@ -137,4 +162,15 @@ export async function fetchBriefingTypes(): Promise<BriefingTypeInfo[]> {
   if (!res.ok) throw new BriefingError(`API error: ${res.status}`, codeFromStatus(res.status), res.status);
   const data = await res.json() as { types: BriefingTypeInfo[] };
   return data.types;
+}
+
+/**
+ * Clears the in-memory briefing ETag cache.
+ *
+ * Test-only helper so API client tests can assert conditional GET behavior
+ * without cross-test leakage from module-level caches.
+ */
+export function resetBriefingApiCacheForTests(): void {
+  briefingListCache = null;
+  briefingDetailCache.clear();
 }
