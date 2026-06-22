@@ -31,6 +31,7 @@ app.use('*', cors({
     if (!allowed) return origin;
     return origin === allowed ? origin : '';
   },
+  exposeHeaders: ['ETag'],
 }));
 
 // Health check — unauthenticated, before auth middleware

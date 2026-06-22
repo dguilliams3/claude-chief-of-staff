@@ -32,6 +32,13 @@ function matchesIfNoneMatch(requestEtag: string | undefined, currentEtag: string
   return requestEtag === currentEtag;
 }
 
+async function hashJsonEtag(prefix: string, payload: unknown): Promise<string> {
+  const bytes = new TextEncoder().encode(JSON.stringify(payload));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `"${prefix}:${hex}"`;
+}
+
 /**
  * Returns the latest briefing per type from D1, with session token metadata.
  *
@@ -122,9 +129,7 @@ briefings.get('/', async (c) => {
     };
   });
 
-  const first = items[0];
-  const last = items[items.length - 1];
-  const etag = `"briefings:${items.length}:${first?.id ?? 'none'}:${first?.generatedAt ?? 'none'}:${last?.id ?? 'none'}"`;
+  const etag = await hashJsonEtag('briefings', items);
   applyCacheHeaders(c, etag);
   if (matchesIfNoneMatch(c.req.header('if-none-match'), etag)) {
     return c.body(null, 304);
@@ -266,19 +271,20 @@ briefings.get('/:id', async (c) => {
   if (!row) return c.json({ error: 'Not found' }, 404);
 
   const r = row as Record<string, string>;
-  const etag = `"briefing:${r.id}:${r.generated_at}"`;
-  applyCacheHeaders(c, etag);
-  if (matchesIfNoneMatch(c.req.header('if-none-match'), etag)) {
-    return c.body(null, 304);
-  }
-  return c.json({
+  const payload = {
     id: r.id,
     type: r.type,
     generatedAt: r.generated_at,
     sessionId: r.session_id,
     sections: safeJsonParse(r.sections_json as string, []),
     metadata: safeJsonParse(r.metadata_json as string, {}),
-  });
+  };
+  const etag = await hashJsonEtag(`briefing:${r.id}`, payload);
+  applyCacheHeaders(c, etag);
+  if (matchesIfNoneMatch(c.req.header('if-none-match'), etag)) {
+    return c.body(null, 304);
+  }
+  return c.json(payload);
 });
 
 /**
