@@ -1,5 +1,7 @@
 # Claude Chief of Staff
 
+[![CI](https://github.com/dguilliams3/claude-chief-of-staff/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/dguilliams3/claude-chief-of-staff/actions/workflows/ci.yml)
+
 A personal AI platform where every conversation is a persistent, named entity: its own display name, avatar, and one-line tagline, backed by a durable, append-only history you can always return to. A headless Claude Code agent and a mobile-first PWA sit on top, and AI briefings are the first app built on the platform, not the whole of it.
 
 _Most chat tools treat a conversation as a disposable exchange. Here, a new chat is something you name, give a face, and come back to, with its history kept permanent._
@@ -155,7 +157,7 @@ This repo ships opinionated tooling so forks stay maintainable:
 | `scripts/check-depersonalization.sh` | Refuses commits containing operator-specific identifiers (configurable regex). Enforced via `scripts/git-hooks/pre-commit` — enable with `git config core.hooksPath scripts/git-hooks` |
 | `.claude/hooks/block-destructive-git.py` | Refuses `git reset --hard` / `git push --force` from Claude Code sessions |
 | `.claude/hooks/spec-quality-gate.py` | Flags SPEC files missing required sections (numbered steps, GATEs, Agent Roster) |
-| `.github/workflows/ci.yml` | Runs lint + typecheck + tests across all workspaces on every push/PR |
+| `.github/workflows/ci.yml` | Runs lint, code standards, schema drift, typecheck, tests, and build checks on every push/PR |
 | `.github/dependabot.yml` | Weekly npm dep updates, workspaces-aware |
 
 ## Documentation

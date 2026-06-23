@@ -17,7 +17,7 @@ import { useState, useEffect } from "react";
 import { useStore } from "@/store";
 import { fetchSessions } from "@/domain/session/api";
 import type { Session } from "@/domain/session/types";
-import { formatTokens } from "./AppHeader";
+import { formatTokens } from "@/lib/formatTokens";
 
 /** Converts an ISO 8601 timestamp into compact relative time (e.g., "2h ago", "yesterday"). */
 function formatRelative(iso: string | null): string {

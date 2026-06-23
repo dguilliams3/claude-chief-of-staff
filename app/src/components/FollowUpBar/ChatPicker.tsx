@@ -11,7 +11,7 @@
  */
 import { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/store';
-import { formatTokens } from '@/components/AppHeader/AppHeader';
+import { formatTokens } from '@/lib/formatTokens';
 
 export function ChatPicker({ briefingId }: { briefingId: string }) {
   const conversations = useStore((s) => s.briefingConversations);

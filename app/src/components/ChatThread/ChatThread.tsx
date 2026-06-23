@@ -55,14 +55,13 @@ export function ChatThread({ messages, showTimestamps = false, isLoading = false
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length, isLoading]);
 
-  let lastDate = '';
-
   return (
     <div className={`flex flex-col gap-2 overflow-y-auto ${className}`}>
-      {messages.map((msg) => {
+      {messages.map((msg, index) => {
         const msgDate = new Date(msg.createdAt).toDateString();
-        const showSeparator = showTimestamps && msgDate !== lastDate;
-        lastDate = msgDate;
+        const previousDate =
+          index > 0 ? new Date(messages[index - 1]!.createdAt).toDateString() : null;
+        const showSeparator = showTimestamps && msgDate !== previousDate;
 
         return (
           <div key={msg.id}>
