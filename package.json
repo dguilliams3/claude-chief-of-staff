@@ -12,13 +12,18 @@
     "start": "concurrently -n api,tunnel -c blue,green \"npx tsx server/local/server.ts\" \"cloudflared tunnel run ${TUNNEL_NAME:-YOUR_TUNNEL_NAME}\"",
     "test": "npm run test --workspace=agent && npm run test --workspace=app && npm run test --workspace=server/worker && npm run test --workspace=server/local && vitest run",
     "typecheck": "tsc --noEmit -p agent/tsconfig.json && tsc --noEmit -p app/tsconfig.app.json && tsc --noEmit -p server/worker/tsconfig.json && tsc --noEmit -p server/local/tsconfig.json",
-    "lint": "npm run lint --workspace=app",
+    "lint:scripts": "eslint --config eslint.scripts.config.mjs --max-warnings=0 scripts/check-code-standards.ts scripts/__tests__/check-code-standards.test.ts",
+    "lint": "npm run lint:scripts && npm run lint --workspace=app",
     "check:code-standards": "node --import tsx scripts/check-code-standards.ts",
     "build": "npm run build --workspace=app",
     "preflight": "bash scripts/preflight.sh"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "concurrently": "^9.2.1",
+    "eslint": "^10.5.0",
+    "globals": "^16.5.0",
+    "typescript-eslint": "^8.61.0",
     "vitest": "^4.1.8"
   }
 }
