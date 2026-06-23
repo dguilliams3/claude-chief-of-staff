@@ -111,6 +111,7 @@ describe('initial state', () => {
     expect(get().pendingFollowUps).toEqual({});
     expect(get().followUpError).toBeNull();
     expect(get().followUpHydrating).toEqual({});
+    expect(get().followUpBarErrors).toEqual({});
   });
 
   it('starts with empty multi-chat state', () => {
@@ -454,6 +455,7 @@ describe('hydrateFollowUpHistory', () => {
 
     expect(get().followUpHydrating['b-001']).toBe(false);
     expect(get().followUpHistory['b-001']).toBeUndefined();
+    expect(get().followUpBarErrors['b-001']).toBe('Could not load follow-up chats. Try again.');
   });
 
   it('populates briefingConversations with multiple conversations', async () => {
@@ -488,6 +490,15 @@ describe('createConversation', () => {
     expect(result).toEqual(newConv);
     expect(get().briefingConversations).toContainEqual(newConv);
     expect(get().activeConversationId).toBe('c-new');
+  });
+
+  it('surfaces a recruiter-visible error when new chat creation fails', async () => {
+    mockCreateConversation.mockRejectedValueOnce(new Error('down'));
+
+    const { get } = createTestSlice();
+
+    await expect(get().createConversation('b-001')).rejects.toThrow('down');
+    expect(get().followUpBarErrors['b-001']).toBe('Could not start a new chat. Try again.');
   });
 });
 
@@ -527,6 +538,23 @@ describe('setActiveConversation', () => {
 
     // Keyed by conversationId (c-001)
     expect(get().followUpHistory['c-001']).toBe(EMPTY_HISTORY);
+  });
+
+  it('reverts the active conversation and surfaces an error when switching fails', async () => {
+    mockFetchMessages.mockRejectedValueOnce(new Error('down'));
+
+    const { get, set } = createTestSlice();
+    set({
+      activeConversationId: 'c-001',
+      briefingConversations: [
+        makeConversationListItem({ id: 'c-001', briefingId: 'b-001' }),
+        makeConversationListItem({ id: 'c-002', briefingId: 'b-001' }),
+      ],
+    });
+
+    await expect(get().setActiveConversation('c-002')).rejects.toThrow('down');
+    expect(get().activeConversationId).toBe('c-001');
+    expect(get().followUpBarErrors['b-001']).toBe('Could not switch chats. Try again.');
   });
 });
 

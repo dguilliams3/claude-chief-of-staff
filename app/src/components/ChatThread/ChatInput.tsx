@@ -13,6 +13,13 @@ import { useState, useEffect } from 'react';
 interface ChatInputProps {
   onSubmit: (question: string) => void;
   disabled?: boolean;
+  /**
+   * In-flight state: the previous message is sending and a response is pending.
+   * When true the send button shows a calm "Sending..." spinner so the click
+   * visibly registered. Distinct from `disabled`, which covers all other
+   * not-sendable cases (e.g. an inline error state).
+   */
+  busy?: boolean;
   placeholder?: string;
   /** Pre-filled question from "Ask about this" — consumed once, then cleared. */
   prefill?: string | null;
@@ -29,6 +36,7 @@ interface ChatInputProps {
  *
  * @param props.onSubmit - Called with trimmed input when the form is submitted
  * @param props.disabled - Disables the input and send button
+ * @param props.busy - Previous message is in flight; send button shows a "Sending..." spinner
  * @param props.placeholder - Input placeholder text
  * @param props.prefill - Pre-filled text from "Ask about this" — consumed once on change
  * @param props.onPrefillConsumed - Callback after prefill text is applied to input
@@ -38,7 +46,7 @@ interface ChatInputProps {
  * Coupling: `app/src/store/conversationSlice.ts::prefillQuestion` — source of the prefill value
  * Do NOT: Import the store directly — receive all state via props
  */
-export function ChatInput({ onSubmit, disabled = false, placeholder = 'Ask a follow-up...', prefill, onPrefillConsumed }: ChatInputProps) {
+export function ChatInput({ onSubmit, disabled = false, busy = false, placeholder = 'Ask a follow-up...', prefill, onPrefillConsumed }: ChatInputProps) {
   const [input, setInput] = useState('');
 
   // Consume prefill when it changes
@@ -80,8 +88,9 @@ export function ChatInput({ onSubmit, disabled = false, placeholder = 'Ask a fol
       />
       <button
         type="submit"
-        disabled={disabled || !input.trim()}
+        disabled={disabled || busy || !input.trim()}
         className="
+          inline-flex items-center justify-center gap-1.5
           px-5 py-2.5 rounded-input
           bg-accent/15 text-accent
           border border-accent/25
@@ -92,7 +101,17 @@ export function ChatInput({ onSubmit, disabled = false, placeholder = 'Ask a fol
           transition-all duration-200
         "
       >
-        Send
+        {busy ? (
+          <>
+            <span
+              aria-hidden="true"
+              className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-accent/30 border-t-accent"
+            />
+            <span>Sending</span>
+          </>
+        ) : (
+          'Send'
+        )}
       </button>
     </form>
   );

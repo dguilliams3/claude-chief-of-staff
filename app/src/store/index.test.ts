@@ -119,6 +119,7 @@ describe("subscribe hydration", () => {
     const { useStore } = await import("./index");
     const silentRefresh = vi.fn();
     useStore.setState({ authenticated: true, silentRefresh } as never);
+    await Promise.resolve();
     const callsBeforeVisibility = silentRefresh.mock.calls.length;
 
     documentStub.hidden = false;
@@ -131,5 +132,64 @@ describe("subscribe hydration", () => {
       expect.any(Function),
     );
     expect(silentRefresh).toHaveBeenCalledTimes(callsBeforeVisibility + 1);
+  });
+
+  it("refreshes history data on visibilitychange when the history view is active", async () => {
+    const documentStub = {
+      hidden: true,
+      addEventListener: vi.fn(),
+    };
+    vi.stubGlobal("document", documentStub);
+
+    const { useStore } = await import("./index");
+    const silentRefresh = vi.fn();
+    const fetchHistory = vi.fn().mockResolvedValue(undefined);
+    useStore.setState({
+      authenticated: true,
+      view: "history",
+      silentRefresh,
+      fetchHistory,
+    } as never);
+    await Promise.resolve();
+    const callsBeforeVisibility = silentRefresh.mock.calls.length;
+
+    documentStub.hidden = false;
+    const visibilityHandler = documentStub.addEventListener.mock
+      .calls[0]?.[1] as (() => void) | undefined;
+    visibilityHandler?.();
+
+    expect(silentRefresh).toHaveBeenCalledTimes(callsBeforeVisibility + 1);
+    expect(fetchHistory).toHaveBeenCalledTimes(1);
+  });
+
+  it("refreshes chats list and selected conversation on visibilitychange when chats view is active", async () => {
+    const documentStub = {
+      hidden: true,
+      addEventListener: vi.fn(),
+    };
+    vi.stubGlobal("document", documentStub);
+
+    const { useStore } = await import("./index");
+    const silentRefresh = vi.fn();
+    const fetchConversations = vi.fn().mockResolvedValue(undefined);
+    const refreshSelectedConversation = vi.fn().mockResolvedValue(undefined);
+    useStore.setState({
+      authenticated: true,
+      view: "chats",
+      silentRefresh,
+      fetchConversations,
+      refreshSelectedConversation,
+    } as never);
+    await Promise.resolve();
+    const callsBeforeVisibility = silentRefresh.mock.calls.length;
+
+    documentStub.hidden = false;
+    const visibilityHandler = documentStub.addEventListener.mock
+      .calls[0]?.[1] as (() => void) | undefined;
+    visibilityHandler?.();
+
+    expect(silentRefresh).toHaveBeenCalledTimes(callsBeforeVisibility + 1);
+    expect(fetchConversations).toHaveBeenCalledTimes(1);
+    expect(refreshSelectedConversation).toHaveBeenCalledTimes(1);
   });
 });

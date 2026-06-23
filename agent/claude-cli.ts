@@ -98,13 +98,21 @@ export function callClaude({
     // shell:true required on Windows — .cmd files are cmd.exe scripts, not executables.
     // Escape cmd.exe metacharacters in args to prevent & | ( ) etc from breaking the command.
     const escapedArgs = args.map(escapeCmdArg);
+    // CLAUDECODE must be deleted, not set to undefined: assigning undefined to an
+    // env key leaves the key present (coerced to the string "undefined"), which the
+    // nested CLI reads as set. delete actually removes it.
+    const env = { ...process.env };
+    delete env.CLAUDECODE;
     const child = execFile(
       CLAUDE_CMD,
       escapedArgs,
       {
         timeout: timeoutMs,
         shell: true,
-        env: { ...process.env, CLAUDECODE: undefined },
+        // Briefing JSON envelopes routinely exceed the default 1 MB stdout cap,
+        // which silently kills the child. 50 MB gives ample headroom.
+        maxBuffer: 50 * 1024 * 1024,
+        env,
       },
       (err, stdout, stderr) => {
         if (err) {
@@ -122,6 +130,9 @@ export function callClaude({
     );
 
     if (input) {
+      // Swallow EPIPE: if the CLI exits before reading stdin, the write would
+      // emit an unhandled 'error' on the stream and crash the Node process.
+      child.stdin?.on('error', () => {});
       child.stdin?.write(input);
       child.stdin?.end();
     }

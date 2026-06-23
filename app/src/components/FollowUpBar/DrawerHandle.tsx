@@ -12,11 +12,13 @@ export function DrawerHandle({ isExpanded, onToggle }: {
 }) {
   return (
     <button
+      type="button"
       onClick={onToggle}
+      aria-expanded={isExpanded}
       aria-label={isExpanded ? 'Collapse follow-up' : 'Expand follow-up'}
       className="w-full flex justify-center py-2 cursor-pointer group"
     >
-      <div className={`
+      <div aria-hidden="true" className={`
         w-10 h-1 rounded-full
         bg-muted/30 group-hover:bg-muted/50
         transition-all duration-200

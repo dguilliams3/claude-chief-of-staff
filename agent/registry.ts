@@ -74,25 +74,39 @@ function loadBriefingTypes(): BriefingTypeMeta[] {
 const mergedBriefingTypesMeta = loadBriefingTypes();
 const metaByKey = Object.fromEntries(mergedBriefingTypesMeta.map((t) => [t.key, t]));
 
+/**
+ * Fail loudly at import time if a required briefing-type meta entry is missing,
+ * instead of an opaque `Cannot read properties of undefined` when shared/briefing-types.json drifts.
+ */
+function requireMeta(key: string): BriefingTypeMeta {
+  const meta = metaByKey[key];
+  if (!meta) {
+    throw new Error(
+      `Briefing type "${key}" is missing from shared/briefing-types.json — registry cannot be built.`,
+    );
+  }
+  return meta;
+}
+
 export const briefingTypes: Record<string, BriefingTypeConfig> = {
   work: {
     prompt: work,
-    description: metaByKey.work.description,
-    label: metaByKey.work.label,
+    description: requireMeta('work').description,
+    label: requireMeta('work').label,
     timeoutMs: DEFAULT_BRIEFING_TIMEOUT_MS,
     sourcesSampled: ['jira', 'fireflies', 'daily-log'],
   },
   news: {
     prompt: news,
-    description: metaByKey.news.description,
-    label: metaByKey.news.label,
+    description: requireMeta('news').description,
+    label: requireMeta('news').label,
     timeoutMs: DEFAULT_BRIEFING_TIMEOUT_MS,
     sourcesSampled: ['huggingface', 'web'],
   },
   community: {
     prompt: community,
-    description: metaByKey.community.description,
-    label: metaByKey.community.label,
+    description: requireMeta('community').description,
+    label: requireMeta('community').label,
     timeoutMs: DEFAULT_BRIEFING_TIMEOUT_MS,
     sourcesSampled: ['configured-feeds', 'web'],
   },

@@ -52,24 +52,25 @@ export function SectionCard({ section, defaultOpen = true, index = 0 }: {
       className="animate-card-enter"
       style={{ animationDelay: `${index * 60}ms` }}
     >
-      <Card className={severityBorder[section.severity]}>
+      <Card className={severityBorder[section.severity] ?? ''}>
         <button
+          type="button"
           onClick={() => setOpen(!open)}
           aria-expanded={open}
           aria-label={`Toggle ${section.label}`}
           className="w-full flex items-center justify-between px-5 py-4 text-left group"
         >
-          <span className="flex items-center gap-3">
+          <span className="flex items-center gap-3 min-w-0">
             <SeverityDot severity={section.severity} />
             <span
-              className="font-display italic text-[15px] font-normal text-primary tracking-tight"
+              className="font-display italic text-[15px] font-normal text-primary tracking-tight truncate"
             >
               {section.label}
             </span>
           </span>
-          <span className="flex items-center gap-3">
+          <span className="flex items-center gap-3 shrink-0">
             <SeverityBadge severity={section.severity} />
-            <ChevronDown size={16} className={`text-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+            <ChevronDown size={16} aria-hidden="true" className={`text-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
           </span>
         </button>
 
@@ -78,6 +79,7 @@ export function SectionCard({ section, defaultOpen = true, index = 0 }: {
             <div className="border-t border-border-subtle pt-4">
               <Markdown content={section.content} />
               <button
+                type="button"
                 onClick={() => {
                   setPrefillQuestion(`Tell me more about the "${section.label}" section.`);
                   // Scroll to bottom where FollowUpBar lives
@@ -87,12 +89,12 @@ export function SectionCard({ section, defaultOpen = true, index = 0 }: {
                   followUpInput?.focus();
                 }}
                 className="
-                  mt-3 flex items-center gap-1.5
+                  mt-2 inline-flex items-center gap-1.5 min-h-10
                   text-[11px] font-mono text-muted/60
                   hover:text-accent transition-colors
                 "
               >
-                <MessageCircle size={12} />
+                <MessageCircle size={12} aria-hidden="true" />
                 Ask about this
               </button>
             </div>

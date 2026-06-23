@@ -29,9 +29,10 @@ export function BriefingList({ items, onSelect }: {
 }) {
   if (items.length === 0) {
     return (
-      <p className="text-muted text-sm text-center py-12">
-        No past briefings found.
-      </p>
+      <div className="text-center py-12">
+        <p className="text-sm text-primary">No briefings yet.</p>
+        <p className="mt-1 text-xs text-muted">Generate one and it will appear here.</p>
+      </div>
     );
   }
 
@@ -40,6 +41,7 @@ export function BriefingList({ items, onSelect }: {
       {items.map((item) => (
         <button
           key={item.id}
+          type="button"
           onClick={() => onSelect(item.id)}
           className="
             w-full text-left px-4 py-3 rounded-card
@@ -55,12 +57,12 @@ export function BriefingList({ items, onSelect }: {
               {item.type} briefing
             </p>
             <p className="font-mono text-xs text-muted flex items-center gap-1.5 mt-0.5">
-              <Clock size={12} />
-              {new Date(item.generatedAt).toLocaleDateString(undefined, {
+              <Clock size={12} aria-hidden="true" />
+              {new Date(item.generatedAt).toLocaleString(undefined, {
                 month: 'short', day: 'numeric', year: 'numeric',
                 hour: 'numeric', minute: '2-digit',
               })}
-              <span className="text-border">·</span>
+              <span aria-hidden="true" className="text-border">·</span>
               {item.sectionCount} sections
             </p>
           </div>

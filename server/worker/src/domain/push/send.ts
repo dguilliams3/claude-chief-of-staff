@@ -12,8 +12,8 @@
 
 import {
   buildPushPayload,
-  type PushSubscription as WebPushSubscription,
 } from '@block65/webcrypto-web-push';
+import type { PushSubscription } from '@block65/webcrypto-web-push';
 
 /** Payload shape sent to the service worker. */
 export interface PushPayload {
@@ -46,7 +46,7 @@ export async function sendPushToAll(
 
   for (const row of rows.results) {
     const r = row as Record<string, string>;
-    const subscription: WebPushSubscription = {
+    const subscription: PushSubscription = {
       endpoint: r.endpoint,
       expirationTime: null,
       keys: {

@@ -5,6 +5,7 @@ import { useRelativeTime } from "@/hooks/useRelativeTime";
 import { SessionDropdown } from "./SessionDropdown";
 import { generateAndDownloadPdf } from "@/lib/export";
 import { subscribeToPush, getPushPermissionState } from "@/lib/push";
+import { formatTokens } from "@/lib/formatTokens";
 import { toast } from "@/lib/toast";
 
 /**
@@ -22,20 +23,6 @@ function formatTypeLabel(typeKey: string): string {
   if (FALLBACK_TYPE_LABELS[typeKey]) return FALLBACK_TYPE_LABELS[typeKey];
   // Title-case unknown types so bespoke user briefing types render sensibly
   return typeKey.charAt(0).toUpperCase() + typeKey.slice(1);
-}
-
-/**
- * Formats a raw token count into compact K/M notation.
- *
- * @param n - Token count (e.g., 29000)
- * @returns Compact string (e.g., '29K', '1M', '156K')
- *
- * Used by: AppHeader meta row token indicator
- */
-export function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${Math.round(n / 1_000_000)}M`;
-  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
-  return String(n);
 }
 
 declare const __COMMIT_HASH__: string;
@@ -117,6 +104,7 @@ export function AppHeader() {
       {/* Row 1: Title + logout */}
       <div className="flex items-center justify-between mb-3">
         <button
+          type="button"
           onClick={() => setView({ view: "today" })}
           className="font-display text-[20px] text-primary italic tracking-tight"
         >
@@ -130,14 +118,16 @@ export function AppHeader() {
           )}
           {pushState === "default" && (
             <button
+              type="button"
               onClick={() => void handleEnablePush()}
               aria-label="Enable notifications"
               className="text-muted/50 hover:text-accent transition-colors min-h-12 min-w-12 flex items-center justify-center"
             >
-              <Bell size={14} />
+              <Bell size={14} aria-hidden="true" />
             </button>
           )}
           <button
+            type="button"
             onClick={logout}
             className="font-mono text-[0.6rem] text-muted/40 hover:text-muted transition-colors min-h-12 min-w-12 flex items-center justify-center"
           >
@@ -152,9 +142,12 @@ export function AppHeader() {
           {availableTypes.map((t) => (
             <button
               key={t}
+              type="button"
               onClick={() => setActiveType({ type: t })}
+              aria-pressed={t === activeType}
               className={`
                 relative font-mono text-[11px] uppercase tracking-wider pb-1
+                min-h-10 flex items-center
                 transition-colors duration-200
                 ${
                   t === activeType
@@ -165,7 +158,10 @@ export function AppHeader() {
             >
               {typeMetadata[t]?.label ?? formatTypeLabel(t)}
               {t === activeType && (
-                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent rounded-full" />
+                <span
+                  aria-hidden="true"
+                  className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent rounded-full"
+                />
               )}
             </button>
           ))}
@@ -174,13 +170,14 @@ export function AppHeader() {
         <div ref={dropdownRef} className="relative flex items-stretch">
           {/* Main generate button */}
           <button
+            type="button"
             onClick={() => {
               void triggerBriefing();
             }}
             disabled={isTriggering}
             className="
               flex items-center gap-1.5
-              pl-3 pr-2 py-1.5
+              pl-3 pr-2 py-1.5 min-h-10
               rounded-l-card
               bg-accent text-surface
               text-[10px] font-medium
@@ -192,6 +189,7 @@ export function AppHeader() {
           >
             <RefreshCw
               size={12}
+              aria-hidden="true"
               className={spinOnThisTab ? "animate-spin" : ""}
             />
             <span>
@@ -206,12 +204,14 @@ export function AppHeader() {
           <div className="w-px bg-surface/30 self-stretch" />
           {/* Dropdown arrow toggle */}
           <button
+            type="button"
             onClick={() => setDropdownOpen((o) => !o)}
             disabled={isTriggering}
             aria-label="Session options"
+            aria-expanded={dropdownOpen}
             className="
               flex items-center justify-center
-              px-1.5 py-1.5
+              px-1.5 py-1.5 min-h-10
               rounded-r-card
               bg-accent text-surface
               disabled:opacity-40
@@ -221,6 +221,7 @@ export function AppHeader() {
           >
             <ChevronDown
               size={12}
+              aria-hidden="true"
               className={`transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
             />
           </button>
@@ -233,13 +234,18 @@ export function AppHeader() {
       </div>
 
       {/* Row 3: Temporal tabs + meta */}
-      <div className="flex items-center gap-4">
+      {/* flex-wrap lets the briefing metadata drop below the tabs on very
+          narrow screens instead of overflowing the header horizontally. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 min-w-0">
         {(["today", "history", "chats"] as const).map((v) => (
           <button
             key={v}
+            type="button"
             onClick={() => setView({ view: v })}
+            aria-pressed={v === view}
             className={`
               relative font-mono text-[10px] uppercase tracking-wider pb-0.5
+              min-h-10 flex items-center
               transition-colors duration-200
               ${
                 v === view ? "text-accent-dim" : "text-muted hover:text-primary"
@@ -248,16 +254,23 @@ export function AppHeader() {
           >
             {v === "today" ? "Current" : v === "history" ? "History" : "Chats"}
             {v === view && (
-              <span className="absolute bottom-0 left-0 right-0 h-px bg-accent-dim rounded-full" />
+              <span
+                aria-hidden="true"
+                className="absolute bottom-0 left-0 right-0 h-px bg-accent-dim rounded-full"
+              />
             )}
           </button>
         ))}
         {currentBriefing && (
           <span className="font-mono text-[10px] text-muted ml-auto flex items-center">
             #{currentBriefing.metadata.briefingNumber}
-            <span className="mx-1.5 text-border">·</span>
+            <span aria-hidden="true" className="mx-1.5 text-border">
+              ·
+            </span>
             {ago}
-            <span className="mx-1.5 text-border">·</span>
+            <span aria-hidden="true" className="mx-1.5 text-border">
+              ·
+            </span>
             {currentBriefing.tokenUsage ? (
               <>
                 <span className="text-accent">
@@ -271,11 +284,12 @@ export function AppHeader() {
               <span className="text-muted">—</span>
             )}
             <button
+              type="button"
               onClick={() => void generateAndDownloadPdf(currentBriefing)}
               aria-label="Download PDF"
-              className="ml-2 text-muted/50 hover:text-accent transition-colors"
+              className="ml-1 inline-flex items-center justify-center min-h-10 min-w-10 text-muted/50 hover:text-accent transition-colors"
             >
-              <Download size={12} />
+              <Download size={12} aria-hidden="true" />
             </button>
           </span>
         )}

@@ -51,10 +51,17 @@ export function parseCliUsage(jsonOutput: string): CliUsage | null {
     const cacheCreationTokens = data.usage?.cache_creation_input_tokens ?? 0;
     const totalTokens = inputTokens + cacheCreationTokens;
 
-    // Context window from model usage (e.g. 1000000 for Opus)
+    // Context window from model usage (e.g. 1000000 for Opus).
+    // Multi-model sessions report several entries; pick the LARGEST contextWindow
+    // rather than an arbitrary first entry, which could be a small-window helper model.
     const modelUsage = data.modelUsage ?? {};
-    const firstModel = Object.values(modelUsage)[0] as Record<string, unknown> | undefined;
-    const contextWindow = (firstModel?.contextWindow as number) ?? 0;
+    const contextWindow = (Object.values(modelUsage) as Array<Record<string, unknown>>).reduce(
+      (max, entry) => {
+        const cw = typeof entry?.contextWindow === 'number' ? entry.contextWindow : 0;
+        return cw > max ? cw : max;
+      },
+      0,
+    );
 
     const costUsd = data.total_cost_usd ?? 0;
 

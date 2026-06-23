@@ -20,6 +20,13 @@ function extractText(field: unknown): string {
   return '';
 }
 
+/** Parse an RSS pubDate to ISO; fall back to now() on a missing/garbage date. */
+function toIsoDate(raw: unknown): string {
+  const parsed = new Date(String(raw ?? ''));
+  if (Number.isNaN(parsed.getTime())) return new Date().toISOString();
+  return parsed.toISOString();
+}
+
 function stripHtml(html: string): string {
   return convert(html, {
     wordwrap: false,
@@ -65,7 +72,7 @@ export async function fetchRssFeed(
       url: String(item.link ?? ''),
       title: extractText(item.title),
       author: extractText(item['dc:creator']),
-      publishedAt: new Date(String(item.pubDate ?? '')).toISOString(),
+      publishedAt: toIsoDate(item.pubDate),
       content: stripHtml(extractText(item.description)),
       kind: 'post',
     }),

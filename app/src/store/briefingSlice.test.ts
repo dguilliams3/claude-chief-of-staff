@@ -125,6 +125,7 @@ describe('initial state', () => {
     const { get } = createTestSlice();
     expect(get().loading).toBe(true);
     expect(get().briefings).toEqual({});
+    expect(get().briefingsError).toBeNull();
   });
 
   it('has sensible defaults', () => {
@@ -132,8 +133,11 @@ describe('initial state', () => {
     expect(get().activeType).toBe('work');
     expect(get().activeTrigger).toBeNull();
     expect(get().historyList).toEqual([]);
+    expect(get().historyLoaded).toBe(false);
+    expect(get().historyError).toBeNull();
     expect(get().selectedBriefingId).toBeNull();
     expect(get().selectedBriefing).toBeNull();
+    expect(get().selectedBriefingError).toBeNull();
   });
 });
 
@@ -171,6 +175,7 @@ describe('refresh', () => {
     await get().refresh();
     expect(get().loading).toBe(false);
     expect(get().briefings).toEqual({ work: mockBriefing }); // stale data preserved
+    expect(get().briefingsError).toBe('Could not load the latest briefings. Try again.');
   });
 });
 
@@ -363,6 +368,7 @@ describe('fetchHistory', () => {
 
     expect(get().historyList).toEqual([mockListItem]);
     expect(get().historyLoading).toBe(false);
+    expect(get().historyLoaded).toBe(true);
   });
 
   it('clears historyLoading on failure', async () => {
@@ -371,6 +377,33 @@ describe('fetchHistory', () => {
     const { get } = createTestSlice();
     await get().fetchHistory();
     expect(get().historyLoading).toBe(false);
+    expect(get().historyLoaded).toBe(false);
+    expect(get().historyError).toBe('Could not load briefing history. Try again.');
+  });
+
+  it('keeps cached history visible during a refresh', async () => {
+    let resolveList: ((items: BriefingListItem[]) => void) | undefined;
+    mockFetchBriefingList.mockReturnValueOnce(
+      new Promise<BriefingListItem[]>((resolve) => {
+        resolveList = resolve;
+      }),
+    );
+
+    const cachedItem = { ...mockListItem, id: 'cached-briefing' };
+    const freshItem = { ...mockListItem, id: 'fresh-briefing' };
+    const { get, set } = createTestSlice();
+    set({ historyLoaded: true, historyList: [cachedItem] });
+
+    const pending = get().fetchHistory();
+
+    expect(get().historyLoading).toBe(false);
+    expect(get().historyList).toEqual([cachedItem]);
+
+    resolveList?.([freshItem]);
+    await pending;
+
+    expect(get().historyList).toEqual([freshItem]);
+    expect(get().historyLoaded).toBe(true);
   });
 });
 
@@ -398,11 +431,12 @@ describe('selectBriefing', () => {
     expect(get().selectedBriefing).toBeNull();
   });
 
-  it('clears selectedBriefingId on fetch failure', async () => {
+  it('keeps selectedBriefingId and surfaces an error on fetch failure', async () => {
     mockFetchBriefingById.mockRejectedValueOnce(new Error('404'));
 
     const { get } = createTestSlice();
     await get().selectBriefing({ id: 'bad-id' });
-    expect(get().selectedBriefingId).toBeNull();
+    expect(get().selectedBriefingId).toBe('bad-id');
+    expect(get().selectedBriefingError).toBe('Could not open that briefing. Try again.');
   });
 });

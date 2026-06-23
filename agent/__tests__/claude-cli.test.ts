@@ -147,6 +147,7 @@ describe("claude-cli.ts", () => {
     it("writes input to stdin when provided", async () => {
       let capturedWrite: string | null = null;
       const mockStdin = {
+        on: vi.fn(),
         write: vi.fn((data: string) => {
           capturedWrite = data;
         }),

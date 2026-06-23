@@ -43,7 +43,7 @@ export interface ConversationIdentity {
   avatar: string | null;
 }
 
-export interface ConversationIdentityUpdate {
+export interface ConversationIdentityPatch {
   displayName?: string | null;
   tagline?: string | null;
   avatar?: string | null;
@@ -385,7 +385,7 @@ export function prepareUpdateConversationName(
 export async function updateConversationIdentity(
   db: D1Database,
   conversationId: string,
-  identity: ConversationIdentityUpdate,
+  identity: ConversationIdentityPatch,
 ): Promise<void> {
   await prepareUpdateConversationIdentity(db, conversationId, identity).run();
 }
@@ -396,7 +396,7 @@ export async function updateConversationIdentity(
 export function prepareUpdateConversationIdentity(
   db: D1Database,
   conversationId: string,
-  identity: ConversationIdentityUpdate,
+  identity: ConversationIdentityPatch,
 ): D1PreparedStatement {
   const assignments: string[] = [];
   const values: Array<string | null> = [];

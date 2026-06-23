@@ -16,4 +16,4 @@ export {
   failFollowUp,
   getFollowUpJob,
 } from './followUpQueue';
-export type { FollowUpJob, FollowUpJobStatus } from './followUpQueue';
+export type { FollowUpJob, FollowUpJobState } from './followUpQueue';
