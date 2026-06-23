@@ -17,30 +17,38 @@
  */
 import type { Message, ConversationListItem } from '@/domain/conversation';
 import {
-  fetchConversations as apiFetchConversations,
-  fetchConversationMessages as apiFetchMessages,
-  updateConversationIdentity as apiUpdateConversationIdentity,
-  updateConversationName as apiUpdateConversationName,
+  fetchConversations,
+  fetchConversationMessages,
+  updateConversationIdentity,
+  updateConversationName,
 } from '@/domain/conversation';
 import type { ConversationIdentityUpdate } from '@/domain/conversation';
+import { toast } from '@/lib/toast';
 
 export interface ChatsSlice {
   /** All conversations for the Chats tab list */
   conversations: ConversationListItem[];
   /** Whether the conversation list is loading */
   conversationsLoading: boolean;
+  /** Whether the conversation list has completed at least one fetch attempt */
+  conversationsLoaded: boolean;
+  /** User-visible list-level error for the Chats surface. */
+  conversationsError: string | null;
   /** Currently selected conversation in the detail view (null = list view) */
   selectedConversation: ConversationListItem | null;
   /** Messages for the selected conversation */
   selectedConversationMessages: Message[];
   /** Whether selected conversation messages are loading */
   selectedConversationLoading: boolean;
+  /** User-visible detail load error when a selected conversation cannot open. */
+  selectedConversationError: string | null;
   /** Per-conversation error messages (keyed by conversation ID) */
   conversationErrors: Record<string, string>;
 
   // Actions
   fetchConversations: () => Promise<void>;
   selectConversation: (options: { conversation: ConversationListItem | null }) => Promise<void>;
+  refreshSelectedConversation: () => Promise<void>;
   clearSelectedConversation: () => void;
   renameConversation: (opts: { conversationId: string; name: string }) => Promise<void>;
   updateConversationIdentity: (opts: {
@@ -56,13 +64,17 @@ type StoreSet = (partial: Partial<ChatsSlice>) => void;
 export const CHATS_INITIAL_STATE: Pick<
   ChatsSlice,
   'conversations' | 'conversationsLoading' | 'selectedConversation' |
-  'selectedConversationMessages' | 'selectedConversationLoading' | 'conversationErrors'
+  'selectedConversationMessages' | 'selectedConversationLoading' | 'conversationErrors' |
+  'conversationsLoaded' | 'conversationsError' | 'selectedConversationError'
 > = {
   conversations: [],
   conversationsLoading: false,
+  conversationsLoaded: false,
+  conversationsError: null,
   selectedConversation: null,
   selectedConversationMessages: [],
   selectedConversationLoading: false,
+  selectedConversationError: null,
   conversationErrors: {},
 };
 
@@ -83,43 +95,113 @@ export function createChatsSlice(set: StoreSet, get: StoreGet): ChatsSlice {
   return {
     ...CHATS_INITIAL_STATE,
 
-    async fetchConversations() {
-      set({ conversationsLoading: true });
+    fetchConversations: async () => {
+      const hasCachedConversations = get().conversationsLoaded;
+      if (!hasCachedConversations) {
+        set({ conversationsLoading: true });
+      }
       try {
-        const list = await apiFetchConversations();
-        set({ conversations: list, conversationsLoading: false });
+        const list = await fetchConversations();
+        set({
+          conversations: list,
+          conversationsLoading: false,
+          conversationsLoaded: true,
+          conversationsError: null,
+        });
       } catch {
-        set({ conversationsLoading: false });
+        set({
+          conversationsLoading: false,
+          conversationsError: 'Could not load chats. Try again.',
+        });
       }
     },
 
     async selectConversation({ conversation }: { conversation: ConversationListItem | null }) {
       if (!conversation) {
-        set({ selectedConversation: null, selectedConversationMessages: [] });
+        set({
+          selectedConversation: null,
+          selectedConversationMessages: [],
+          selectedConversationLoading: false,
+          selectedConversationError: null,
+        });
         return;
       }
-      set({ selectedConversation: conversation, selectedConversationLoading: true });
+      set({
+        selectedConversation: conversation,
+        selectedConversationLoading: true,
+        selectedConversationError: null,
+      });
       try {
-        const messages = await apiFetchMessages({ conversationId: conversation.id });
+        const messages = await fetchConversationMessages({ conversationId: conversation.id });
         // Guard: if the user rapidly switched conversations, the selected conversation
         // may have changed while we were fetching. Only commit if still selected.
         if (get().selectedConversation?.id === conversation.id) {
-          set({ selectedConversationMessages: messages, selectedConversationLoading: false });
+          set({
+            selectedConversationMessages: messages,
+            selectedConversationLoading: false,
+            selectedConversationError: null,
+          });
         }
       } catch {
-        // Only clear if this conversation is still selected (same race guard)
         if (get().selectedConversation?.id === conversation.id) {
-          set({ selectedConversation: null, selectedConversationMessages: [], selectedConversationLoading: false });
+          set({
+            selectedConversationMessages: [],
+            selectedConversationLoading: false,
+            selectedConversationError: 'Could not open that chat. Try again.',
+          });
+        }
+      }
+    },
+
+    async refreshSelectedConversation() {
+      const selectedConversation = get().selectedConversation;
+      if (!selectedConversation) return;
+
+      const hasCachedMessages = get().selectedConversationMessages.length > 0;
+      if (!hasCachedMessages) {
+        set({ selectedConversationLoading: true });
+      }
+
+      try {
+        const messages = await fetchConversationMessages({ conversationId: selectedConversation.id });
+        if (get().selectedConversation?.id === selectedConversation.id) {
+          set({
+            selectedConversationMessages: messages,
+            selectedConversationLoading: false,
+            selectedConversationError: null,
+          });
+        }
+      } catch {
+        if (get().selectedConversation?.id === selectedConversation.id) {
+          if (hasCachedMessages) {
+            set({ selectedConversationLoading: false });
+          } else {
+            set({
+              selectedConversationMessages: [],
+              selectedConversationLoading: false,
+              selectedConversationError: 'Could not refresh this chat. Try again.',
+            });
+          }
         }
       }
     },
 
     clearSelectedConversation() {
-      set({ selectedConversation: null, selectedConversationMessages: [], selectedConversationLoading: false });
+      set({
+        selectedConversation: null,
+        selectedConversationMessages: [],
+        selectedConversationLoading: false,
+        selectedConversationError: null,
+      });
     },
 
     async renameConversation({ conversationId, name }: { conversationId: string; name: string }) {
-      await apiUpdateConversationName({ conversationId, name });
+      try {
+        await updateConversationName({ conversationId, name });
+      } catch (err) {
+        toast('Could not rename the conversation. Try again.', 'error');
+        throw err;
+      }
       const current = get();
       set({
         conversations: current.conversations.map(conversation =>
@@ -140,7 +222,13 @@ export function createChatsSlice(set: StoreSet, get: StoreGet): ChatsSlice {
       conversationId: string;
       identity: ConversationIdentityUpdate;
     }) {
-      const updated = await apiUpdateConversationIdentity({ conversationId, identity });
+      let updated: Awaited<ReturnType<typeof updateConversationIdentity>>;
+      try {
+        updated = await updateConversationIdentity({ conversationId, identity });
+      } catch (err) {
+        toast('Could not save identity changes. Try again.', 'error');
+        throw err;
+      }
       const current = get();
       set({
         conversations: current.conversations.map((conversation) =>

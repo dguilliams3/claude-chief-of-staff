@@ -31,22 +31,9 @@ const CONTENT_TRUNCATE_LENGTH = 1500;
 export async function fetchGraphqlFeed(
   source: Extract<FeedSource, { kind: 'graphql' }>,
 ): Promise<FeedItem[]> {
-  const response = await fetch(source.graphqlUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      query: POSTS_QUERY,
-      variables: { limit: source.limit ?? 20 },
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `GraphQL fetch failed for ${source.name}: ${response.status} ${response.statusText}`,
-    );
-  }
-
-  const json = (await response.json()) as {
+  // Defensive like the RSS path: a network error, non-OK status, or a non-JSON
+  // error body must yield [] rather than rejecting and discarding sibling feeds.
+  let json: {
     data?: {
       posts?: {
         results?: Array<{
@@ -63,6 +50,28 @@ export async function fetchGraphqlFeed(
       };
     };
   };
+  try {
+    const response = await fetch(source.graphqlUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: POSTS_QUERY,
+        variables: { limit: source.limit ?? 20 },
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(
+        `[feeds] GraphQL fetch failed for ${source.name}: ${response.status} ${response.statusText}`,
+      );
+      return [];
+    }
+
+    json = await response.json();
+  } catch (err) {
+    console.error(`[feeds] GraphQL fetch failed for ${source.name}:`, err);
+    return [];
+  }
 
   const posts = json.data?.posts?.results ?? [];
 

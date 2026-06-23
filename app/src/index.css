@@ -10,7 +10,7 @@
   --color-chrome: #a58c73;
   --color-primary: #e8e2d9;
   --color-secondary: #b8afa3;
-  --color-muted: #887e73;
+  --color-muted: #9e9487;
   --color-accent: #c87941;
   --color-accent-dim: #9c5e33;
 
@@ -80,6 +80,34 @@ body::before {
   animation: glow-pulse 3s ease-in-out 4;
 }
 
+/* --- Skeleton shimmer --- */
+/* Left-to-right gradient shimmer used by the Skeleton primitive
+ * (app/src/components/Skeleton/Skeleton.tsx) to indicate pending content loads
+ * (briefings, history). Background-position animation reads cheaper than
+ * translateX on lower-end mobile GPUs and does not trigger layout. Disabled by
+ * the reduced-motion block below, degrading to a static bg-surface-raised
+ * rectangle that still preserves layout shape. */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.animate-skeleton-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
 /* --- Section expand/collapse (grid-template-rows) --- */
 .section-collapse {
   display: grid;
@@ -96,7 +124,8 @@ body::before {
 /* --- Reduced motion --- */
 @media (prefers-reduced-motion: reduce) {
   .animate-card-enter,
-  .animate-glow-pulse {
+  .animate-glow-pulse,
+  .animate-skeleton-shimmer {
     animation: none !important;
   }
   .section-collapse {
@@ -111,12 +140,23 @@ body::before {
   }
 }
 
+/* --- Global focus-visible ring (a11y) --- */
+*:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
 /* --- Markdown prose --- */
 .prose-briefing {
   font-family: var(--font-body), "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
   font-size: 0.9rem;
   line-height: 1.65;
   color: var(--color-secondary);
+  /* Narrow-viewport guard: long unbroken strings (URLs, IDs, tokens) must wrap
+     instead of forcing horizontal page scroll on small screens. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .prose-briefing h1,
@@ -189,6 +229,11 @@ body::before {
   border-collapse: collapse;
   margin: 0.75em 0;
   font-size: 0.82rem;
+  /* Narrow-viewport guard: a wide table scrolls horizontally within the card
+     instead of widening the whole page. `display: block` lets overflow-x take
+     effect since react-markdown renders the bare <table> with no wrapper. */
+  display: block;
+  overflow-x: auto;
 }
 
 .prose-briefing thead th {

@@ -9,13 +9,33 @@
  * See also: `app/src/store/index.ts` -- auth and view state consumed here
  * Do NOT: Add React Router -- view switching is intentionally store-driven
  */
+import { lazy, Suspense, useEffect } from "react";
 import { useStore } from "@/store";
 import { AppHeader } from "@/components/AppHeader";
 import { TodayView } from "@/views/TodayView";
-import { HistoryView } from "@/views/HistoryView";
-import { ChatsView } from "@/views/ChatsView";
 import { LoginScreen } from "@/views/LoginScreen";
 import { ToastContainer } from "@/components/Toast/Toast";
+
+type IdleCallbackHandle = number;
+
+type IdleWindow = Window & {
+  requestIdleCallback?: (callback: () => void) => IdleCallbackHandle;
+  cancelIdleCallback?: (handle: IdleCallbackHandle) => void;
+};
+
+const loadHistoryView = () => import("@/views/HistoryView");
+const HistoryView = lazy(async () => {
+  const module = await loadHistoryView();
+  return { default: module.HistoryView };
+});
+
+const loadChatsView = () => import("@/views/ChatsView");
+const ChatsView = lazy(async () => {
+  const module = await loadChatsView();
+  return { default: module.ChatsView };
+});
+
+let nonDefaultViewsPrewarmed = false;
 
 /**
  * Root component that gates on authentication state.
@@ -48,6 +68,8 @@ function AppShell() {
   const view = useStore((s) => s.view);
   const loading = useStore((s) => s.loading);
 
+  useWarmNonDefaultViews({ enabled: !loading });
+
   if (loading) {
     return (
       <div className="min-h-dvh bg-background flex items-center justify-center">
@@ -68,13 +90,68 @@ function AppShell() {
     >
       <AppHeader />
       {view === "today" && <TodayView />}
-      {view === "history" && <HistoryView />}
+      {view === "history" && (
+        <Suspense fallback={<HistoryViewFallback />}>
+          <HistoryView />
+        </Suspense>
+      )}
       {view === "chats" && (
         <div className="flex-1 overflow-hidden">
-          <ChatsView />
+          <Suspense fallback={<ChatsViewFallback />}>
+            <ChatsView />
+          </Suspense>
         </div>
       )}
       <ToastContainer />
+    </div>
+  );
+}
+
+function useWarmNonDefaultViews({ enabled }: { enabled: boolean }) {
+  useEffect(() => {
+    if (!enabled || nonDefaultViewsPrewarmed || typeof window === "undefined") {
+      return;
+    }
+
+    const prewarm = () => {
+      nonDefaultViewsPrewarmed = true;
+      void loadHistoryView();
+      void loadChatsView();
+    };
+
+    const idleWindow = window as IdleWindow;
+    if (typeof idleWindow.requestIdleCallback === "function") {
+      const handle = idleWindow.requestIdleCallback(prewarm);
+      return () => idleWindow.cancelIdleCallback?.(handle);
+    }
+
+    const timeoutHandle = window.setTimeout(prewarm, 1200);
+    return () => window.clearTimeout(timeoutHandle);
+  }, [enabled]);
+}
+
+/**
+ * Lightweight fallback while the history bundle streams in.
+ * Keeps the same page-width rhythm as the real HistoryView without
+ * eagerly importing its full list/detail UI into the default shell chunk.
+ */
+function HistoryViewFallback() {
+  return (
+    <div className="px-4 py-4 max-w-2xl mx-auto w-full">
+      <p className="font-mono text-sm text-muted">Loading history...</p>
+    </div>
+  );
+}
+
+/**
+ * Lightweight fallback while the chats bundle streams in.
+ * Preserves the app-shell flex layout so the lazy boundary does not
+ * collapse the pinned-bottom chat layout during the short chunk fetch.
+ */
+function ChatsViewFallback() {
+  return (
+    <div className="flex h-full items-center justify-center p-4">
+      <p className="font-mono text-sm text-muted">Loading chats...</p>
     </div>
   );
 }

@@ -31,7 +31,7 @@ export function SeverityBadge({ severity }: { severity: Severity }) {
     <span className={`
       px-2 py-0.5 rounded-pill text-xs
       font-mono font-medium uppercase tracking-wider
-      border ${styles[severity]}
+      border ${styles[severity] ?? styles.info}
     `}>
       {severity}
     </span>

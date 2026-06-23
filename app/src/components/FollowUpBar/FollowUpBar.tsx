@@ -50,6 +50,7 @@ export function FollowUpBar({
     (s) => s.followUpHistory[historyKey] ?? EMPTY_HISTORY,
   );
   const isHydrating = useStore((s) => s.followUpHydrating[briefingId] ?? false);
+  const followUpBarError = useStore((s) => s.followUpBarErrors[briefingId] ?? null);
   const pendingFollowUp = useStore((s) => s.pendingFollowUps[historyKey]);
   const sendFollowUp = useStore((s) => s.sendFollowUp);
   const hydrateFollowUpHistory = useStore((s) => s.hydrateFollowUpHistory);
@@ -114,10 +115,26 @@ export function FollowUpBar({
           </div>
         )}
 
+        {followUpBarError && history.length === 0 && !loading && (
+          <div className="px-4 pt-2">
+            <div className="rounded-card border border-severity-flag/40 bg-severity-flag/8 px-3 py-3 text-sm text-severity-flag">
+              <p>{followUpBarError}</p>
+              <button
+                type="button"
+                onClick={() => void hydrateFollowUpHistory({ briefingId })}
+                className="mt-2 inline-flex min-h-10 items-center rounded-card bg-accent px-4 py-2 text-sm font-medium text-surface transition-all duration-200 hover:brightness-110"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
+
         <ChatPicker briefingId={briefingId} />
         <ChatInput
           onSubmit={handleSend}
           disabled={loading}
+          busy={loading}
           prefill={prefillQuestion}
           onPrefillConsumed={() => setPrefillQuestion(null)}
         />

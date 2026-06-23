@@ -9,6 +9,6 @@
     // Do NOT add skipLibCheck as a bandaid for type errors in our own code.
     "noEmit": true
   },
-  "include": ["*.ts", "routes/**/*.ts", "domain/**/*.ts"],
+  "include": ["*.ts", "*.d.ts", "routes/**/*.ts", "domain/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

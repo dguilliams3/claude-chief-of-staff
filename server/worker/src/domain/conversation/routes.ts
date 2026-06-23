@@ -14,7 +14,7 @@
  * Do NOT: Use DELETE on any conversation/message row -- append-only invariant for messages
  * Do NOT: Generate timestamps client-side -- use datetime('now') in SQL
  */
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import type { Env } from '../../types';
 import {
   normalizeTimestamp,
@@ -24,6 +24,22 @@ import {
 } from './persistence';
 
 const conversations = new Hono<{ Bindings: Env }>();
+
+function applyCacheHeaders(c: Context<{ Bindings: Env }>, etag: string) {
+  c.header('ETag', etag);
+  c.header('Cache-Control', 'private, max-age=0, must-revalidate');
+}
+
+function matchesIfNoneMatch(requestEtag: string | undefined, currentEtag: string): boolean {
+  return requestEtag === currentEtag;
+}
+
+async function hashJsonEtag(prefix: string, payload: unknown): Promise<string> {
+  const bytes = new TextEncoder().encode(JSON.stringify(payload));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `"${prefix}:${hex}"`;
+}
 
 /**
  * Lists conversations with aggregates for the Chats tab.
@@ -85,6 +101,12 @@ conversations.get('/', async (c) => {
     };
   });
 
+  const etag = await hashJsonEtag(`conversations:${sort}:${limit}`, items);
+  applyCacheHeaders(c, etag);
+  if (matchesIfNoneMatch(c.req.header('if-none-match'), etag)) {
+    return c.body(null, 304);
+  }
+
   return c.json(items);
 });
 
@@ -129,6 +151,12 @@ conversations.get('/:id/messages', async (c) => {
       createdAt: normalizeTimestamp(r.created_at),
     };
   });
+
+  const etag = await hashJsonEtag(`conversation-messages:${conversationId}:${limit}`, messages);
+  applyCacheHeaders(c, etag);
+  if (matchesIfNoneMatch(c.req.header('if-none-match'), etag)) {
+    return c.body(null, 304);
+  }
 
   return c.json(messages);
 });
@@ -178,6 +206,12 @@ conversations.get('/by-briefing/:briefingId', async (c) => {
       contextWindow: (r.context_window as number) ?? null,
     };
   });
+
+  const etag = await hashJsonEtag(`conversations-by-briefing:${briefingId}`, items);
+  applyCacheHeaders(c, etag);
+  if (matchesIfNoneMatch(c.req.header('if-none-match'), etag)) {
+    return c.body(null, 304);
+  }
 
   return c.json(items);
 });

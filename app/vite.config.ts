@@ -61,6 +61,11 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2}'],
+        globIgnores: [
+          '**/html2pdf-*.js',
+          '**/HistoryView-*.js',
+          '**/ChatsView-*.js',
+        ],
       },
       manifest,
     }),

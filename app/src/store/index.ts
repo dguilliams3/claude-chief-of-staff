@@ -127,7 +127,15 @@ useStore.subscribe((state) => {
 if (typeof document !== "undefined") {
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden && useStore.getState().authenticated) {
-      useStore.getState().silentRefresh();
+      const state = useStore.getState();
+      state.silentRefresh();
+      if (state.view === "history") {
+        void state.fetchHistory();
+      }
+      if (state.view === "chats") {
+        void state.fetchConversations();
+        void state.refreshSelectedConversation();
+      }
     }
   });
 }

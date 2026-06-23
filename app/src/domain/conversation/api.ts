@@ -23,6 +23,15 @@ import { FollowUpError, ConversationError } from './errors';
 import type { FollowUpErrorCode } from './errors/FollowUpError';
 import type { ConversationErrorCode } from './errors/ConversationError';
 
+type CachedConversationResponse<T> = {
+  etag: string;
+  data: T;
+};
+
+const conversationListCache = new Map<string, CachedConversationResponse<ConversationListItem[]>>();
+const conversationMessagesCache = new Map<string, CachedConversationResponse<Message[]>>();
+const conversationByBriefingCache = new Map<string, CachedConversationResponse<ConversationListItem[]>>();
+
 /** Maps HTTP status codes to ConversationErrorCode for structured error handling. */
 function codeFromStatus(status: number): ConversationErrorCode {
   if (status === 401 || status === 403) return 'UNAUTHORIZED';
@@ -129,9 +138,19 @@ export async function fetchFollowUpStatus({ jobId, conversationId, briefingId, i
  * Downstream: Worker `GET /conversations` → D1 LEFT JOIN aggregate query
  */
 export async function fetchConversations(): Promise<ConversationListItem[]> {
-  const res = await fetch(`${API_BASE}/conversations`, { headers: headers() });
+  const requestUrl = `${API_BASE}/conversations`;
+  const cached = conversationListCache.get(requestUrl);
+  const requestHeaders = {
+    ...headers(),
+    ...(cached ? { 'If-None-Match': cached.etag } : {}),
+  };
+  const res = await fetch(requestUrl, { headers: requestHeaders });
+  if (res.status === 304 && cached) return cached.data;
   if (!res.ok) throw new ConversationError(`API error: ${res.status}`, codeFromStatus(res.status), res.status);
-  return res.json() as Promise<ConversationListItem[]>;
+  const data = await res.json() as ConversationListItem[];
+  const etag = res.headers.get('ETag');
+  if (etag) conversationListCache.set(requestUrl, { etag, data });
+  return data;
 }
 
 /**
@@ -148,12 +167,19 @@ export async function fetchConversations(): Promise<ConversationListItem[]> {
 export async function fetchConversationMessages({ conversationId }: {
   conversationId: string;
 }): Promise<Message[]> {
-  const res = await fetch(
-    `${API_BASE}/conversations/${encodeURIComponent(conversationId)}/messages`,
-    { headers: headers() },
-  );
+  const requestUrl = `${API_BASE}/conversations/${encodeURIComponent(conversationId)}/messages`;
+  const cached = conversationMessagesCache.get(requestUrl);
+  const requestHeaders = {
+    ...headers(),
+    ...(cached ? { 'If-None-Match': cached.etag } : {}),
+  };
+  const res = await fetch(requestUrl, { headers: requestHeaders });
+  if (res.status === 304 && cached) return cached.data;
   if (!res.ok) throw new ConversationError(`API error: ${res.status}`, codeFromStatus(res.status), res.status);
-  return res.json() as Promise<Message[]>;
+  const data = await res.json() as Message[];
+  const etag = res.headers.get('ETag');
+  if (etag) conversationMessagesCache.set(requestUrl, { etag, data });
+  return data;
 }
 
 /**
@@ -171,12 +197,19 @@ export async function fetchConversationMessages({ conversationId }: {
 export async function fetchConversationByBriefing({ briefingId }: {
   briefingId: string;
 }): Promise<ConversationListItem[]> {
-  const res = await fetch(
-    `${API_BASE}/conversations/by-briefing/${encodeURIComponent(briefingId)}`,
-    { headers: headers() },
-  );
+  const requestUrl = `${API_BASE}/conversations/by-briefing/${encodeURIComponent(briefingId)}`;
+  const cached = conversationByBriefingCache.get(requestUrl);
+  const requestHeaders = {
+    ...headers(),
+    ...(cached ? { 'If-None-Match': cached.etag } : {}),
+  };
+  const res = await fetch(requestUrl, { headers: requestHeaders });
+  if (res.status === 304 && cached) return cached.data;
   if (!res.ok) throw new ConversationError(`API error: ${res.status}`, codeFromStatus(res.status), res.status);
-  return res.json() as Promise<ConversationListItem[]>;
+  const data = await res.json() as ConversationListItem[];
+  const etag = res.headers.get('ETag');
+  if (etag) conversationByBriefingCache.set(requestUrl, { etag, data });
+  return data;
 }
 
 /**
@@ -256,6 +289,18 @@ export async function updateConversationIdentity({
   );
   if (!res.ok) throw new ConversationError(`API error: ${res.status}`, codeFromStatus(res.status), res.status);
   return res.json() as Promise<{ id: string; displayName?: string | null; tagline?: string | null; avatar?: string | null }>;
+}
+
+/**
+ * Clears the in-memory conversation ETag caches.
+ *
+ * Test-only helper so API client tests can exercise conditional GET behavior
+ * without cross-test leakage from module-level cache state.
+ */
+export function resetConversationApiCacheForTests(): void {
+  conversationListCache.clear();
+  conversationMessagesCache.clear();
+  conversationByBriefingCache.clear();
 }
 
 

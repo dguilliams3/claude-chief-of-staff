@@ -31,7 +31,7 @@ const dotStyles: Record<Severity, string> = {
  */
 export function SeverityDot({ severity }: { severity: Severity }) {
   return (
-    <span className="relative flex h-2.5 w-2.5">
+    <span className="relative flex h-2.5 w-2.5 shrink-0">
       <span className={`
         absolute inset-0 rounded-full opacity-40 blur-[3px]
         ${severity === 'flag' ? 'bg-severity-flag' : severity === 'warn' ? 'bg-severity-warn' : 'bg-severity-info'}

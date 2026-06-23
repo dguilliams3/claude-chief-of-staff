@@ -11,15 +11,17 @@
  */
 import { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/store';
-import { formatTokens } from '@/components/AppHeader/AppHeader';
+import { formatTokens } from '@/lib/formatTokens';
 
 export function ChatPicker({ briefingId }: { briefingId: string }) {
   const conversations = useStore((s) => s.briefingConversations);
   const activeId = useStore((s) => s.activeConversationId);
   const setActiveConversation = useStore((s) => s.setActiveConversation);
   const createConversation = useStore((s) => s.createConversation);
+  const followUpBarError = useStore((s) => s.followUpBarErrors[briefingId] ?? null);
 
   const [open, setOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
@@ -47,17 +49,25 @@ export function ChatPicker({ briefingId }: { briefingId: string }) {
     return idx >= 0 ? `Chat ${idx + 1}` : 'Chat';
   }
 
-  function handleSelect(convId: string) {
-    setActiveConversation(convId);
-    setOpen(false);
+  async function handleSelect(convId: string) {
+    try {
+      await setActiveConversation(convId);
+      setOpen(false);
+    } catch {
+      // Visible error is rendered from store state. Keep the picker open.
+    }
   }
 
   async function handleNewChat() {
+    if (isCreating) return;
     try {
+      setIsCreating(true);
       await createConversation(briefingId);
       setOpen(false);
     } catch {
-      // Silently fail — dropdown stays open so user can retry.
+      // Visible error is rendered from store state. Keep the picker open.
+    } finally {
+      setIsCreating(false);
     }
   }
 
@@ -65,11 +75,15 @@ export function ChatPicker({ briefingId }: { briefingId: string }) {
     <div ref={ref} className="relative px-4 pt-2">
       {/* Active conversation bar */}
       <button
+        type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center justify-between w-full px-3 py-1.5 rounded-md text-sm bg-surface border border-border-subtle hover:bg-surface-raised transition-colors"
+        aria-expanded={open}
+        aria-label={`Switch conversation, current: ${activeLabel}`}
+        className="flex items-center justify-between w-full px-3 py-2 min-h-10 rounded-md text-sm bg-surface border border-border-subtle hover:bg-surface-raised transition-colors"
       >
         <span className="text-primary font-medium truncate">{activeLabel}</span>
         <svg
+          aria-hidden="true"
           className={`w-4 h-4 text-muted ml-2 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
           fill="none"
           viewBox="0 0 24 24"
@@ -83,6 +97,11 @@ export function ChatPicker({ briefingId }: { briefingId: string }) {
       {/* Dropdown */}
       {open && (
         <div className="absolute left-4 right-4 bottom-full mb-1 bg-surface border border-border-subtle rounded-md shadow-lg overflow-hidden z-20">
+          {followUpBarError ? (
+            <div className="border-b border-border-subtle bg-severity-flag/10 px-3 py-2 text-xs text-severity-flag">
+              {followUpBarError}
+            </div>
+          ) : null}
           {conversations.map((conv, idx) => {
             const label = conv.name ?? `Chat ${idx + 1}`;
             const isActive = conv.id === activeId;
@@ -92,9 +111,11 @@ export function ChatPicker({ briefingId }: { briefingId: string }) {
             return (
               <button
                 key={conv.id}
+                type="button"
                 onClick={() => handleSelect(conv.id)}
+                aria-current={isActive ? 'true' : undefined}
                 className={`
-                  flex items-center justify-between w-full px-3 py-2 text-sm text-left
+                  flex items-center justify-between w-full px-3 py-2 min-h-10 text-sm text-left
                   hover:bg-surface-raised transition-colors
                   ${isActive ? 'border-l-2 border-accent text-accent' : 'border-l-2 border-transparent text-primary'}
                 `}
@@ -105,10 +126,22 @@ export function ChatPicker({ briefingId }: { briefingId: string }) {
             );
           })}
           <button
+            type="button"
             onClick={handleNewChat}
-            className="flex items-center w-full px-3 py-2 text-sm text-accent hover:bg-surface-raised transition-colors border-t border-border-subtle"
+            disabled={isCreating}
+            className="flex items-center gap-1.5 w-full px-3 py-2 min-h-10 text-sm text-accent hover:bg-surface-raised transition-colors border-t border-border-subtle disabled:opacity-50"
           >
-            + New Chat
+            {isCreating ? (
+              <>
+                <span
+                  aria-hidden="true"
+                  className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-accent/30 border-t-accent"
+                />
+                Starting
+              </>
+            ) : (
+              '+ New Chat'
+            )}
           </button>
         </div>
       )}

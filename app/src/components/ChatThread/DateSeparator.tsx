@@ -19,9 +19,9 @@ export function DateSeparator({ date }: DateSeparatorProps) {
 
   return (
     <div className="flex items-center gap-2 py-2">
-      <div className="flex-1 border-t border-border-subtle" />
+      <div aria-hidden="true" className="flex-1 border-t border-border-subtle" />
       <span className="text-[10px] font-medium text-muted uppercase tracking-wider">{formatted}</span>
-      <div className="flex-1 border-t border-border-subtle" />
+      <div aria-hidden="true" className="flex-1 border-t border-border-subtle" />
     </div>
   );
 }

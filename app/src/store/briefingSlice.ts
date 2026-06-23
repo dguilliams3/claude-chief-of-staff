@@ -20,7 +20,7 @@ import type {
 } from "@/domain/briefing";
 import {
   fetchBriefings,
-  triggerBriefing as apiTrigger,
+  triggerBriefing,
   fetchTriggerStatus,
   fetchBriefingList,
   fetchBriefingById,
@@ -66,13 +66,18 @@ export interface BriefingSlice {
   availableTypes: readonly string[];
   /** Full briefing-type metadata (key, label, description) keyed by type. */
   typeMetadata: Record<string, BriefingTypeInfo>;
+  /** User-visible load failure for latest briefings when no current data is available. */
+  briefingsError: string | null;
   sessionMode: SessionMode;
 
   // History / detail
   historyList: BriefingListItem[];
   historyLoading: boolean;
+  historyLoaded: boolean;
+  historyError: string | null;
   selectedBriefingId: string | null;
   selectedBriefing: Briefing | null;
+  selectedBriefingError: string | null;
 
   // Actions
   setActiveType: (opts: { type: string }) => void;
@@ -97,9 +102,12 @@ export { stopAllPolling };
 async function fetchAndSet(set: (s: Partial<BriefingSlice>) => void) {
   try {
     const data = await fetchBriefings();
-    set({ briefings: data as Record<string, Briefing> });
+    set({
+      briefings: data as Record<string, Briefing>,
+      briefingsError: null,
+    });
   } catch {
-    // Leave briefings as-is on failure — components show empty state
+    set({ briefingsError: 'Could not load the latest briefings. Try again.' });
   }
 }
 
@@ -118,10 +126,14 @@ export const BRIEFING_INITIAL_STATE: Pick<
   | "activeTrigger"
   | "availableTypes"
   | "typeMetadata"
+  | "briefingsError"
   | "historyList"
   | "historyLoading"
+  | "historyLoaded"
+  | "historyError"
   | "selectedBriefingId"
   | "selectedBriefing"
+  | "selectedBriefingError"
   | "sessionMode"
 > = {
   briefings: {},
@@ -132,10 +144,14 @@ export const BRIEFING_INITIAL_STATE: Pick<
   // Work + News are the guaranteed defaults (defined in shared/briefing-types.json).
   availableTypes: ["work", "news"],
   typeMetadata: {},
+  briefingsError: null,
   historyList: [],
   historyLoading: false,
+  historyLoaded: false,
+  historyError: null,
   selectedBriefingId: null,
   selectedBriefing: null,
+  selectedBriefingError: null,
   sessionMode: { type: "new" },
 };
 
@@ -206,7 +222,7 @@ export function createBriefingSlice(
       }
     },
 
-    async triggerBriefing() {
+    triggerBriefing: async () => {
       if (get().activeTrigger) return;
 
       const triggerType = get().activeType;
@@ -215,7 +231,7 @@ export function createBriefingSlice(
 
       let jobId: string;
       try {
-        const result = await apiTrigger({ type: triggerType, sessionId });
+        const result = await triggerBriefing({ type: triggerType, sessionId });
         jobId = result.jobId;
       } catch (err) {
         console.error("Trigger failed:", err);
@@ -247,9 +263,17 @@ export function createBriefingSlice(
             set({ activeTrigger: null, sessionMode: { type: "new" } });
           },
           onTimeout() {
+            toast(
+              "Briefing generation timed out. It may still finish — refresh to check.",
+              "warn",
+            );
             set({ activeTrigger: null, sessionMode: { type: "new" } });
           },
           onTerminalError() {
+            toast(
+              "Briefing generation stopped unexpectedly. Try generating again.",
+              "error",
+            );
             set({ activeTrigger: null, sessionMode: { type: "new" } });
           },
         },
@@ -280,26 +304,51 @@ export function createBriefingSlice(
     },
 
     async fetchHistory() {
-      set({ historyLoading: true });
+      const hasCachedHistory = get().historyLoaded;
+      if (!hasCachedHistory) {
+        set({ historyLoading: true });
+      }
       try {
         const list = await fetchBriefingList();
-        set({ historyList: list as BriefingListItem[], historyLoading: false });
+        set({
+          historyList: list as BriefingListItem[],
+          historyLoading: false,
+          historyLoaded: true,
+          historyError: null,
+        });
       } catch {
-        set({ historyLoading: false });
+        set({
+          historyLoading: false,
+          historyError: 'Could not load briefing history. Try again.',
+        });
       }
     },
 
     async selectBriefing({ id }: { id: string | null }) {
       if (!id) {
-        set({ selectedBriefingId: null, selectedBriefing: null });
+        set({
+          selectedBriefingId: null,
+          selectedBriefing: null,
+          selectedBriefingError: null,
+        });
         return;
       }
-      set({ selectedBriefingId: id });
+      set({
+        selectedBriefingId: id,
+        selectedBriefing: null,
+        selectedBriefingError: null,
+      });
       try {
         const briefing = await fetchBriefingById({ id });
-        set({ selectedBriefing: briefing as Briefing });
+        set({
+          selectedBriefing: briefing as Briefing,
+          selectedBriefingError: null,
+        });
       } catch {
-        set({ selectedBriefingId: null, selectedBriefing: null });
+        set({
+          selectedBriefing: null,
+          selectedBriefingError: 'Could not open that briefing. Try again.',
+        });
       }
     },
   };
