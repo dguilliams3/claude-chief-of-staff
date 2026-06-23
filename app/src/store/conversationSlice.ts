@@ -61,6 +61,8 @@ export interface ConversationSlice {
 
   // Hydration state (for FollowUpBar)
   followUpHydrating: Record<string, boolean>;
+  /** Recruiter-visible follow-up bar errors keyed by briefingId. */
+  followUpBarErrors: Record<string, string>;
 
   // Multi-chat state (per-briefing)
   activeConversationId: string | null;
@@ -299,6 +301,7 @@ export const CONVERSATION_INITIAL_STATE: Pick<
   | "pendingFollowUps"
   | "followUpError"
   | "followUpHydrating"
+  | "followUpBarErrors"
   | "activeConversationId"
   | "briefingConversations"
   | "prefillQuestion"
@@ -307,10 +310,30 @@ export const CONVERSATION_INITIAL_STATE: Pick<
   pendingFollowUps: {},
   followUpError: null,
   followUpHydrating: {},
+  followUpBarErrors: {},
   activeConversationId: null,
   briefingConversations: [],
   prefillQuestion: null,
 };
+
+function clearFollowUpBarError(
+  errors: Record<string, string>,
+  briefingId?: string | null,
+): Record<string, string> {
+  if (!briefingId || !(briefingId in errors)) return errors;
+  const next = { ...errors };
+  delete next[briefingId];
+  return next;
+}
+
+function setFollowUpBarError(
+  errors: Record<string, string>,
+  briefingId: string | null | undefined,
+  message: string,
+): Record<string, string> {
+  if (!briefingId) return errors;
+  return { ...errors, [briefingId]: message };
+}
 
 /**
  * Builds the follow-up sender action with optimistic UI and adaptive polling.
@@ -507,6 +530,7 @@ function createHydrateFollowUpHistory(
     currentHydratingBriefingId = briefingId;
     set({
       followUpHydrating: { ...get().followUpHydrating, [briefingId]: true },
+      followUpBarErrors: clearFollowUpBarError(get().followUpBarErrors, briefingId),
     });
 
     try {
@@ -521,6 +545,7 @@ function createHydrateFollowUpHistory(
       set({
         briefingConversations: conversationListItems,
         activeConversationId: conversationListItems.length > 0 ? conversationListItems[0].id : null,
+        followUpBarErrors: clearFollowUpBarError(get().followUpBarErrors, briefingId),
       });
 
       if (conversationListItems.length === 0) {
@@ -553,8 +578,14 @@ function createHydrateFollowUpHistory(
       currentHydratingBriefingId = null;
     } catch (error) {
       console.error("[COS] Follow-up hydration failed for briefing", briefingId, error);
+      toast("Couldn't load earlier messages. Reopen the chat to retry.", "warn");
       set({
         followUpHydrating: { ...get().followUpHydrating, [briefingId]: false },
+        followUpBarErrors: setFollowUpBarError(
+          get().followUpBarErrors,
+          briefingId,
+          'Could not load follow-up chats. Try again.',
+        ),
       });
       currentHydratingBriefingId = null;
     }
@@ -563,12 +594,24 @@ function createHydrateFollowUpHistory(
 
 function createConversationAction({ get, set }: SliceStore): ConversationSlice["createConversation"] {
   return async (briefingId?: string): Promise<ConversationListItem> => {
-    const item = await createConversation({ briefingId });
-    set({
-      briefingConversations: [...get().briefingConversations, item],
-      activeConversationId: item.id,
-    });
-    return item;
+    try {
+      const item = await createConversation({ briefingId });
+      set({
+        briefingConversations: [...get().briefingConversations, item],
+        activeConversationId: item.id,
+        followUpBarErrors: clearFollowUpBarError(get().followUpBarErrors, briefingId),
+      });
+      return item;
+    } catch (error) {
+      set({
+        followUpBarErrors: setFollowUpBarError(
+          get().followUpBarErrors,
+          briefingId,
+          'Could not start a new chat. Try again.',
+        ),
+      });
+      throw error;
+    }
   };
 }
 
@@ -576,6 +619,11 @@ function createSetActiveConversation(
   { get, set }: SliceStore,
 ): ConversationSlice["setActiveConversation"] {
   return async (conversationId: string) => {
+    const previousConversationId = get().activeConversationId;
+    const targetConversation = get().briefingConversations.find(
+      (conversation) => conversation.id === conversationId,
+    );
+    const briefingId = targetConversation?.briefingId ?? null;
     set({ activeConversationId: conversationId });
 
     try {
@@ -586,9 +634,19 @@ function createSetActiveConversation(
           ...get().followUpHistory,
           [historyKey]: messages.length > 0 ? messages : EMPTY_HISTORY,
         },
+        followUpBarErrors: clearFollowUpBarError(get().followUpBarErrors, briefingId),
       });
     } catch (error) {
       console.error("[COS] Failed to load messages for conversation", conversationId, error);
+      set({
+        activeConversationId: previousConversationId,
+        followUpBarErrors: setFollowUpBarError(
+          get().followUpBarErrors,
+          briefingId,
+          'Could not switch chats. Try again.',
+        ),
+      });
+      throw error;
     }
   };
 }
@@ -599,12 +657,22 @@ function createFetchBriefingConversations(
   return async (briefingId: string) => {
     try {
       const convListItems = await fetchConversationByBriefing({ briefingId });
-      set({ briefingConversations: convListItems });
+      set({
+        briefingConversations: convListItems,
+        followUpBarErrors: clearFollowUpBarError(get().followUpBarErrors, briefingId),
+      });
       if (convListItems.length > 0 && !get().activeConversationId) {
         set({ activeConversationId: convListItems[0].id });
       }
     } catch (error) {
       console.error("[COS] Failed to fetch briefing conversations", briefingId, error);
+      set({
+        followUpBarErrors: setFollowUpBarError(
+          get().followUpBarErrors,
+          briefingId,
+          'Could not load follow-up chats. Try again.',
+        ),
+      });
     }
   };
 }

@@ -14,7 +14,9 @@ export type { FeedSource, FeedItem } from './types';
  * Returns combined FeedItem[] sorted by publishedAt descending.
  */
 export async function fetchAllSources(sources: FeedSource[]): Promise<FeedItem[]> {
-  const results = await Promise.all(
+  // allSettled (not all): one rejected source must not discard the feeds that
+  // already resolved. Rejected sources are logged and contribute zero items.
+  const settled = await Promise.allSettled(
     sources.map((source) => {
       switch (source.kind) {
         case 'rss':
@@ -24,6 +26,15 @@ export async function fetchAllSources(sources: FeedSource[]): Promise<FeedItem[]
       }
     }),
   );
+
+  const results: FeedItem[][] = [];
+  for (const result of settled) {
+    if (result.status === 'fulfilled') {
+      results.push(result.value ?? []);
+    } else {
+      console.error('[feeds] Source failed:', result.reason);
+    }
+  }
 
   return results
     .flat()

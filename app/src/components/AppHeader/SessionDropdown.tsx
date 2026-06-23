@@ -95,6 +95,7 @@ export function SessionDropdown({ onClose }: { onClose: () => void }) {
     >
       {/* "✦ New Session" pinned at top */}
       <button
+        type="button"
         onClick={handleSelectNew}
         className={`
           flex items-center justify-between w-full px-3 py-2 text-sm text-left
@@ -152,6 +153,7 @@ export function SessionDropdown({ onClose }: { onClose: () => void }) {
           return (
             <button
               key={session.id}
+              type="button"
               onClick={() => handleSelectSession(session.id)}
               className={`
                 flex items-center justify-between w-full px-3 py-2 text-sm text-left
@@ -167,7 +169,9 @@ export function SessionDropdown({ onClose }: { onClose: () => void }) {
                 <span className="font-mono text-[10px] text-accent/70 uppercase tracking-wider shrink-0">
                   {typeLabel}
                 </span>
-                <span className="font-mono text-[10px] text-muted/50">·</span>
+                <span aria-hidden="true" className="font-mono text-[10px] text-muted/50">
+                  ·
+                </span>
                 <span className="font-mono text-[10px] text-muted truncate">
                   {timeStr}
                 </span>

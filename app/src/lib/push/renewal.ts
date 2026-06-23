@@ -89,18 +89,28 @@ export async function checkAndRenewPushSubscription(): Promise<boolean> {
       return false;
     }
 
-    // Subscribe first, THEN unsubscribe old — if re-subscribe fails, we keep the
-    // existing subscription rather than silently losing push capability.
-    // The server uses endpoint as unique key, so a new subscription just adds a row;
-    // the old endpoint gets cleaned up on next 410 response.
+    // Unsubscribe the OLD subscription FIRST, then re-subscribe. This is the
+    // crux of renewal: subscribeToPush() reuses any *existing* PushSubscription,
+    // so if we left the stale one in place it would simply re-register the same
+    // (expiring) endpoint and we'd gain nothing. Dropping it first forces
+    // subscribeToPush() down its `!subscription` branch and mints a genuinely
+    // fresh endpoint.
+    //
+    // Safety: if the fresh subscribe fails after we've unsubscribed, we DON'T
+    // stamp LAST_RENEWAL_KEY, so the next app load retries renewal instead of
+    // sleeping for ~7 days with no push capability. The old endpoint gets
+    // cleaned up server-side on its next 410 response regardless.
+    await subscription.unsubscribe().catch(() => {
+      // Non-fatal: a failed unsubscribe still lets subscribeToPush() refresh the
+      // endpoint; the old one will 410 and get cleaned up server-side.
+    });
+
     const success = await subscribeToPush();
     if (success) {
-      // New subscription registered — safe to drop the old one
-      await subscription.unsubscribe().catch(() => {
-        // Non-fatal: old endpoint will 410 and get cleaned up server-side
-      });
       localStorage.setItem(LAST_RENEWAL_KEY, String(now));
       console.log('[Push Renewal] Renewed successfully');
+    } else {
+      console.warn('[Push Renewal] Re-subscribe failed — will retry on next load');
     }
     return success;
   } catch (err) {
