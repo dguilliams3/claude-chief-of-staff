@@ -27,6 +27,11 @@ export default defineConfig([
           message: 'Use workspace imports or @/ aliases instead of deep relative paths.',
         }],
       }],
+      // These React Compiler advisory rules are useful once a codebase commits to
+      // the full compiler-style model. For this standalone fork we keep the stable
+      // hook safety rules on, but disable the two high-noise heuristics that flag
+      // legitimate UI synchronization patterns as errors.
+      'react-hooks/set-state-in-effect': 'off',
     },
   },
 

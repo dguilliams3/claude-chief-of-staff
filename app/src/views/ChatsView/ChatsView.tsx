@@ -13,7 +13,7 @@ import { useEffect } from 'react';
 import { useStore } from '@/store';
 import { ConversationDetail } from './ConversationDetail';
 import type { ConversationListItem } from '@/domain/conversation';
-import { formatTokens } from '@/components/AppHeader/AppHeader';
+import { formatTokens } from '@/lib/formatTokens';
 
 export function ChatsView() {
   const conversations = useStore((s) => s.conversations);
@@ -48,7 +48,8 @@ export function ChatsView() {
   if (conversations.length === 0) {
     return (
       <div className="p-4 text-center">
-        <p className="mb-4 text-sm text-muted">No conversations yet.</p>
+        <p className="text-sm text-primary">No conversations yet.</p>
+        <p className="mb-4 mt-1 text-xs text-muted">Start one to ask a follow-up about a briefing.</p>
         <button
           onClick={handleNewChat}
           className="text-sm text-accent transition-colors hover:text-accent/80"

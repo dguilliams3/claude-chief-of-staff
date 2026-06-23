@@ -5,6 +5,7 @@ import { useRelativeTime } from "@/hooks/useRelativeTime";
 import { SessionDropdown } from "./SessionDropdown";
 import { generateAndDownloadPdf } from "@/lib/export";
 import { subscribeToPush, getPushPermissionState } from "@/lib/push";
+import { formatTokens } from "@/lib/formatTokens";
 import { toast } from "@/lib/toast";
 
 /**
@@ -22,20 +23,6 @@ function formatTypeLabel(typeKey: string): string {
   if (FALLBACK_TYPE_LABELS[typeKey]) return FALLBACK_TYPE_LABELS[typeKey];
   // Title-case unknown types so bespoke user briefing types render sensibly
   return typeKey.charAt(0).toUpperCase() + typeKey.slice(1);
-}
-
-/**
- * Formats a raw token count into compact K/M notation.
- *
- * @param n - Token count (e.g., 29000)
- * @returns Compact string (e.g., '29K', '1M', '156K')
- *
- * Used by: AppHeader meta row token indicator
- */
-export function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${Math.round(n / 1_000_000)}M`;
-  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
-  return String(n);
 }
 
 declare const __COMMIT_HASH__: string;
