@@ -1,0 +1,21 @@
+# Existing repo debt grandfathered into the public code-standards gate.
+# Policy: fix entries in code when you touch the area, then delete the matching
+# fingerprint here in the same change. New violations fail CI immediately.
+
+import-alias|app/src/store/conversationSlice.ts|named|@/domain/conversation|sendFollowUp|apiSendFollowUp
+import-alias|app/src/store/conversationSlice.ts|named|@/domain/conversation|fetchFollowUpStatus|apiFetchFollowUpStatus
+import-alias|app/src/store/conversationSlice.ts|named|@/domain/conversation|fetchConversationMessages|apiFetchMessages
+import-alias|app/src/store/conversationSlice.ts|named|@/domain/conversation|fetchConversationByBriefing|apiFetchConversationByBriefing
+import-alias|app/src/store/conversationSlice.ts|named|@/domain/conversation|createConversation|apiCreateConversation
+import-alias|app/src/store/conversationSlice.ts|named|@/lib/polling|stopAllPolling|stopAllActivePolls
+import-alias|app/src/store/chatsSlice.ts|named|@/domain/conversation|fetchConversations|apiFetchConversations
+import-alias|app/src/store/chatsSlice.ts|named|@/domain/conversation|fetchConversationMessages|apiFetchMessages
+import-alias|app/src/store/chatsSlice.ts|named|@/domain/conversation|updateConversationIdentity|apiUpdateConversationIdentity
+import-alias|app/src/store/chatsSlice.ts|named|@/domain/conversation|updateConversationName|apiUpdateConversationName
+import-alias|app/src/store/briefingSlice.ts|named|@/domain/briefing|triggerBriefing|apiTrigger
+import-alias|app/src/store/authSlice.ts|named|./conversationSlice|stopAllPolling|stopConversationPolling
+import-alias|server/worker/src/domain/push/send.ts|named|@block65/webcrypto-web-push|PushSubscription|WebPushSubscription
+unique-type-name|FollowUpJobStatus|app/src/domain/conversation/types.ts
+unique-type-name|FollowUpJobStatus|server/local/domain/conversation/followUpQueue.ts
+unique-type-name|ConversationIdentityUpdate|app/src/domain/conversation/api.ts
+unique-type-name|ConversationIdentityUpdate|server/worker/src/domain/conversation/persistence.ts
