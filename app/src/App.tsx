@@ -9,13 +9,22 @@
  * See also: `app/src/store/index.ts` -- auth and view state consumed here
  * Do NOT: Add React Router -- view switching is intentionally store-driven
  */
+import { lazy, Suspense } from "react";
 import { useStore } from "@/store";
 import { AppHeader } from "@/components/AppHeader";
 import { TodayView } from "@/views/TodayView";
-import { HistoryView } from "@/views/HistoryView";
-import { ChatsView } from "@/views/ChatsView";
 import { LoginScreen } from "@/views/LoginScreen";
 import { ToastContainer } from "@/components/Toast/Toast";
+
+const HistoryView = lazy(async () => {
+  const module = await import("@/views/HistoryView");
+  return { default: module.HistoryView };
+});
+
+const ChatsView = lazy(async () => {
+  const module = await import("@/views/ChatsView");
+  return { default: module.ChatsView };
+});
 
 /**
  * Root component that gates on authentication state.
@@ -68,13 +77,45 @@ function AppShell() {
     >
       <AppHeader />
       {view === "today" && <TodayView />}
-      {view === "history" && <HistoryView />}
+      {view === "history" && (
+        <Suspense fallback={<HistoryViewFallback />}>
+          <HistoryView />
+        </Suspense>
+      )}
       {view === "chats" && (
         <div className="flex-1 overflow-hidden">
-          <ChatsView />
+          <Suspense fallback={<ChatsViewFallback />}>
+            <ChatsView />
+          </Suspense>
         </div>
       )}
       <ToastContainer />
+    </div>
+  );
+}
+
+/**
+ * Lightweight fallback while the history bundle streams in.
+ * Keeps the same page-width rhythm as the real HistoryView without
+ * eagerly importing its full list/detail UI into the default shell chunk.
+ */
+function HistoryViewFallback() {
+  return (
+    <div className="px-4 py-4 max-w-2xl mx-auto w-full">
+      <p className="font-mono text-sm text-muted">Loading history...</p>
+    </div>
+  );
+}
+
+/**
+ * Lightweight fallback while the chats bundle streams in.
+ * Preserves the app-shell flex layout so the lazy boundary does not
+ * collapse the pinned-bottom chat layout during the short chunk fetch.
+ */
+function ChatsViewFallback() {
+  return (
+    <div className="flex h-full items-center justify-center p-4">
+      <p className="font-mono text-sm text-muted">Loading chats...</p>
     </div>
   );
 }

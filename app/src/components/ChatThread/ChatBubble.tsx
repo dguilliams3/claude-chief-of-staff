@@ -17,7 +17,7 @@ export function ChatBubble({ role, content }: {
     return (
       <div className="flex justify-end">
         <div className="max-w-[85%] px-3.5 py-2 rounded-2xl rounded-br-sm bg-accent/15 border border-accent/20">
-          <p className="font-body text-[0.8rem] text-primary">{content}</p>
+          <p className="font-body text-[0.9rem] text-primary">{content}</p>
         </div>
       </div>
     );

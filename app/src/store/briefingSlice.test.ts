@@ -132,6 +132,7 @@ describe('initial state', () => {
     expect(get().activeType).toBe('work');
     expect(get().activeTrigger).toBeNull();
     expect(get().historyList).toEqual([]);
+    expect(get().historyLoaded).toBe(false);
     expect(get().selectedBriefingId).toBeNull();
     expect(get().selectedBriefing).toBeNull();
   });
@@ -363,6 +364,7 @@ describe('fetchHistory', () => {
 
     expect(get().historyList).toEqual([mockListItem]);
     expect(get().historyLoading).toBe(false);
+    expect(get().historyLoaded).toBe(true);
   });
 
   it('clears historyLoading on failure', async () => {
@@ -371,6 +373,32 @@ describe('fetchHistory', () => {
     const { get } = createTestSlice();
     await get().fetchHistory();
     expect(get().historyLoading).toBe(false);
+    expect(get().historyLoaded).toBe(false);
+  });
+
+  it('keeps cached history visible during a refresh', async () => {
+    let resolveList: ((items: BriefingListItem[]) => void) | undefined;
+    mockFetchBriefingList.mockReturnValueOnce(
+      new Promise<BriefingListItem[]>((resolve) => {
+        resolveList = resolve;
+      }),
+    );
+
+    const cachedItem = { ...mockListItem, id: 'cached-briefing' };
+    const freshItem = { ...mockListItem, id: 'fresh-briefing' };
+    const { get, set } = createTestSlice();
+    set({ historyLoaded: true, historyList: [cachedItem] });
+
+    const pending = get().fetchHistory();
+
+    expect(get().historyLoading).toBe(false);
+    expect(get().historyList).toEqual([cachedItem]);
+
+    resolveList?.([freshItem]);
+    await pending;
+
+    expect(get().historyList).toEqual([freshItem]);
+    expect(get().historyLoaded).toBe(true);
   });
 });
 

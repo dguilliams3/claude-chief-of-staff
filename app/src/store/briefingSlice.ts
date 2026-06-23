@@ -71,6 +71,7 @@ export interface BriefingSlice {
   // History / detail
   historyList: BriefingListItem[];
   historyLoading: boolean;
+  historyLoaded: boolean;
   selectedBriefingId: string | null;
   selectedBriefing: Briefing | null;
 
@@ -120,6 +121,7 @@ export const BRIEFING_INITIAL_STATE: Pick<
   | "typeMetadata"
   | "historyList"
   | "historyLoading"
+  | "historyLoaded"
   | "selectedBriefingId"
   | "selectedBriefing"
   | "sessionMode"
@@ -134,6 +136,7 @@ export const BRIEFING_INITIAL_STATE: Pick<
   typeMetadata: {},
   historyList: [],
   historyLoading: false,
+  historyLoaded: false,
   selectedBriefingId: null,
   selectedBriefing: null,
   sessionMode: { type: "new" },
@@ -280,12 +283,21 @@ export function createBriefingSlice(
     },
 
     async fetchHistory() {
-      set({ historyLoading: true });
+      const hasCachedHistory = get().historyLoaded;
+      if (!hasCachedHistory) {
+        set({ historyLoading: true });
+      }
       try {
         const list = await fetchBriefingList();
-        set({ historyList: list as BriefingListItem[], historyLoading: false });
+        set({
+          historyList: list as BriefingListItem[],
+          historyLoading: false,
+          historyLoaded: true,
+        });
       } catch {
-        set({ historyLoading: false });
+        if (!hasCachedHistory) {
+          set({ historyLoading: false });
+        }
       }
     },
 

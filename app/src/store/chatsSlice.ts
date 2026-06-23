@@ -29,6 +29,8 @@ export interface ChatsSlice {
   conversations: ConversationListItem[];
   /** Whether the conversation list is loading */
   conversationsLoading: boolean;
+  /** Whether the conversation list has completed at least one fetch attempt */
+  conversationsLoaded: boolean;
   /** Currently selected conversation in the detail view (null = list view) */
   selectedConversation: ConversationListItem | null;
   /** Messages for the selected conversation */
@@ -56,10 +58,12 @@ type StoreSet = (partial: Partial<ChatsSlice>) => void;
 export const CHATS_INITIAL_STATE: Pick<
   ChatsSlice,
   'conversations' | 'conversationsLoading' | 'selectedConversation' |
-  'selectedConversationMessages' | 'selectedConversationLoading' | 'conversationErrors'
+  'selectedConversationMessages' | 'selectedConversationLoading' | 'conversationErrors' |
+  'conversationsLoaded'
 > = {
   conversations: [],
   conversationsLoading: false,
+  conversationsLoaded: false,
   selectedConversation: null,
   selectedConversationMessages: [],
   selectedConversationLoading: false,
@@ -84,12 +88,21 @@ export function createChatsSlice(set: StoreSet, get: StoreGet): ChatsSlice {
     ...CHATS_INITIAL_STATE,
 
     async fetchConversations() {
-      set({ conversationsLoading: true });
+      const hasCachedConversations = get().conversationsLoaded;
+      if (!hasCachedConversations) {
+        set({ conversationsLoading: true });
+      }
       try {
         const list = await apiFetchConversations();
-        set({ conversations: list, conversationsLoading: false });
+        set({
+          conversations: list,
+          conversationsLoading: false,
+          conversationsLoaded: true,
+        });
       } catch {
-        set({ conversationsLoading: false });
+        if (!hasCachedConversations) {
+          set({ conversationsLoading: false });
+        }
       }
     },
 
