@@ -14,6 +14,7 @@ import { ArrowLeft, Download } from 'lucide-react';
 import { useStore } from '@/store';
 import { BriefingList } from '@/components/BriefingList';
 import { SectionCard } from '@/components/SectionCard';
+import { Skeleton } from '@/components/Skeleton';
 import { generateAndDownloadPdf } from '@/lib/export';
 
 /**
@@ -38,11 +39,44 @@ export function HistoryView() {
     fetchHistory();
   }, [fetchHistory]);
 
-  // Loading state for selected briefing (ID set but data still fetching)
+  // Loading state for selected briefing (ID set but data still fetching).
+  // Skeleton mirrors the detail layout: header (back link, title, timestamp,
+  // PDF button) + SectionCard placeholders.
   if (selectedBriefingId && !selectedBriefing) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <p className="font-mono text-sm text-muted">Loading briefing...</p>
+      <div
+        className="flex flex-col min-h-[calc(100dvh-80px)]"
+        role="status"
+        aria-label="Loading briefing"
+      >
+        <div className="px-5 pt-4 pb-2">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 space-y-2">
+              <Skeleton width={96} height={14} decorative />
+              <Skeleton width="55%" height={22} decorative />
+              <Skeleton width="40%" height={12} decorative />
+            </div>
+            <Skeleton width={64} height={28} decorative />
+          </div>
+        </div>
+        <main className="flex-1 px-4 py-4 space-y-4 max-w-2xl mx-auto w-full">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="bg-surface rounded-card border border-border-subtle px-5 py-4 space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Skeleton width={10} height={10} rounded="full" decorative />
+                  <Skeleton width={120} height={15} decorative />
+                </div>
+                <Skeleton width={48} height={14} rounded="full" decorative />
+              </div>
+              <Skeleton width="100%" height={12} decorative />
+              <Skeleton width="88%" height={12} decorative />
+            </div>
+          ))}
+        </main>
       </div>
     );
   }
@@ -87,11 +121,30 @@ export function HistoryView() {
     );
   }
 
-  // Loading state
+  // Loading state — skeleton rows mirror BriefingList's row shape so the user
+  // sees the eventual layout, not a centered spinner.
   if (historyLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <p className="font-mono text-sm text-muted">Loading history...</p>
+      <div
+        className="px-4 py-4 max-w-2xl mx-auto w-full"
+        role="status"
+        aria-label="Loading history"
+      >
+        <Skeleton width="45%" height={22} className="mb-4 ml-1" decorative />
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="bg-surface rounded-card border border-border-subtle px-4 py-3 flex items-center gap-3"
+            >
+              <Skeleton width={10} height={10} rounded="full" decorative />
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <Skeleton width="55%" height={14} decorative />
+                <Skeleton width="80%" height={12} decorative />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

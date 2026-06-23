@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/store';
 
-const TIMEOUT_MS = 10 * 60 * 1000;
+const TIMEOUT_MS = 20 * 60 * 1000;
 
 export function RunningBanner() {
   const activeTrigger = useStore((s) => s.activeTrigger);
@@ -23,13 +23,21 @@ export function RunningBanner() {
   }, [triggerStart]);
 
   const timedOut = elapsed > TIMEOUT_MS;
+  const liveRegion = timedOut
+    ? { role: 'alert' as const, ariaLive: 'assertive' as const }
+    : { role: 'status' as const, ariaLive: 'polite' as const };
 
   return (
-    <div className={`mx-4 mt-3 px-4 py-3 rounded-[var(--radius-card)] border ${
-      timedOut
-        ? 'bg-severity-flag/10 border-severity-flag/20'
-        : 'bg-accent/10 border-accent/20'
-    }`}>
+    <div
+      role={liveRegion.role}
+      aria-live={liveRegion.ariaLive}
+      aria-atomic="true"
+      className={`mx-4 mt-3 px-4 py-3 rounded-[var(--radius-card)] border ${
+        timedOut
+          ? 'bg-severity-flag/10 border-severity-flag/20'
+          : 'bg-accent/10 border-accent/20'
+      }`}
+    >
       <p
         className={`font-mono text-sm ${timedOut ? 'text-severity-flag' : 'text-secondary'}`}
       >
@@ -40,7 +48,7 @@ export function RunningBanner() {
       </p>
       <p className="font-body text-muted text-xs mt-1">
         {timedOut
-          ? 'It has been over 10 minutes. You can retry or dismiss.'
+          ? 'It has been over 20 minutes. You can retry or dismiss.'
           : 'This takes 2-5 minutes. Feel free to come back.'
         }
       </p>
@@ -54,7 +62,7 @@ export function RunningBanner() {
           </button>
           <button
             onClick={cancelTrigger}
-            className="font-mono text-xs px-3 py-1 rounded bg-surface-raised text-muted hover:text-foreground"
+            className="font-mono text-xs px-3 py-1 rounded bg-surface-raised text-muted hover:text-primary"
           >
             Dismiss
           </button>

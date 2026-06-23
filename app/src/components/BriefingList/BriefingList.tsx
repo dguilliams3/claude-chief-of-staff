@@ -29,9 +29,10 @@ export function BriefingList({ items, onSelect }: {
 }) {
   if (items.length === 0) {
     return (
-      <p className="text-muted text-sm text-center py-12">
-        No past briefings found.
-      </p>
+      <div className="text-center py-12">
+        <p className="text-sm text-primary">No briefings yet.</p>
+        <p className="mt-1 text-xs text-muted">Generate one and it will appear here.</p>
+      </div>
     );
   }
 

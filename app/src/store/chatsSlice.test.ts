@@ -77,6 +77,7 @@ describe('initial state', () => {
     const { get } = createTestSlice();
     expect(get().conversations).toEqual([]);
     expect(get().conversationsLoading).toBe(false);
+    expect(get().conversationsLoaded).toBe(false);
     expect(get().selectedConversation).toBeNull();
     expect(get().selectedConversationMessages).toEqual([]);
     expect(get().selectedConversationLoading).toBe(false);
@@ -98,6 +99,7 @@ describe('fetchConversations', () => {
 
     expect(get().conversations).toEqual(items);
     expect(get().conversationsLoading).toBe(false);
+    expect(get().conversationsLoaded).toBe(true);
   });
 
   it('clears loading flag on failure', async () => {
@@ -107,6 +109,37 @@ describe('fetchConversations', () => {
     await get().fetchConversations();
 
     expect(get().conversationsLoading).toBe(false);
+    expect(get().conversationsLoaded).toBe(false);
+  });
+
+  it('keeps cached conversations visible during a refresh', async () => {
+    let resolveList:
+      | ((items: ConversationListItem[]) => void)
+      | undefined;
+    mockFetchConversations.mockReturnValueOnce(
+      new Promise<ConversationListItem[]>((resolve) => {
+        resolveList = resolve;
+      }),
+    );
+
+    const cachedConversation = makeConversationListItem({ id: 'cached-conversation' });
+    const freshConversation = makeConversationListItem({ id: 'fresh-conversation' });
+    const { get, set } = createTestSlice();
+    set({
+      conversationsLoaded: true,
+      conversations: [cachedConversation],
+    });
+
+    const pending = get().fetchConversations();
+
+    expect(get().conversationsLoading).toBe(false);
+    expect(get().conversations).toEqual([cachedConversation]);
+
+    resolveList?.([freshConversation]);
+    await pending;
+
+    expect(get().conversations).toEqual([freshConversation]);
+    expect(get().conversationsLoaded).toBe(true);
   });
 });
 
