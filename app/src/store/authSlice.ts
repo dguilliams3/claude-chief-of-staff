@@ -18,7 +18,7 @@
  */
 import { setAuthToken, validateAuthToken } from '@/lib/api';
 import { stopBriefingPolling, BRIEFING_INITIAL_STATE } from './briefingSlice';
-import { stopAllPolling as stopConversationPolling, CONVERSATION_INITIAL_STATE } from './conversationSlice';
+import { stopAllPolling, CONVERSATION_INITIAL_STATE } from './conversationSlice';
 import { CHATS_INITIAL_STATE } from './chatsSlice';
 
 const TOKEN_KEY = 'cos-token';
@@ -159,7 +159,7 @@ export function createAuthSlice(
 
     logout() {
       stopBriefingPolling();
-      stopConversationPolling();
+      stopAllPolling();
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(EMAIL_KEY);
       setAuthToken('');

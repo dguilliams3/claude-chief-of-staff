@@ -11,7 +11,7 @@
  *         Jobs auto-expire after RETENTION_MS to prevent memory leaks.
  */
 
-export type FollowUpJobStatus = 'running' | 'completed' | 'failed';
+export type FollowUpJobState = 'running' | 'completed' | 'failed';
 
 export interface FollowUpJob {
   id: string;
@@ -20,7 +20,7 @@ export interface FollowUpJob {
   lockKey: string;
   /** The real Claude session ID — empty string until Claude responds for new sessions. */
   sessionId: string;
-  status: FollowUpJobStatus;
+  status: FollowUpJobState;
   createdAt: string;
   completedAt?: string;
   answer?: string;
