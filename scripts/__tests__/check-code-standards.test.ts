@@ -6,7 +6,6 @@ import {
   collectImportAliasViolations,
   collectUniqueTypeNameViolations,
   countFunctionsInFile,
-  filterBaselineViolations,
   main,
   MAX_FILE_STATEMENTS,
   MAX_FUNCTION_STATEMENTS,
@@ -135,7 +134,7 @@ ${makeStatements(MAX_FUNCTION_STATEMENTS + 2, "  ")}
     );
   });
 
-  it("flags aliased imports outside the baseline", () => {
+  it("flags aliased imports", () => {
     const filePath = writeFixture(
       "import-alias.ts",
       `import { stopAllPolling as stopConversationPolling } from "./conversation";
@@ -177,28 +176,4 @@ ${makeStatements(MAX_FUNCTION_STATEMENTS + 2, "  ")}
     ).toBe(true);
   });
 
-  it("grandfathers exact baseline fingerprints but fails on new ones", () => {
-    const violations = [
-      {
-        rule: "import-alias" as const,
-        fingerprint:
-          "import-alias|app/src/store/authSlice.ts|named|./conversationSlice|stopAllPolling|stopConversationPolling",
-        message: "first",
-      },
-      {
-        rule: "import-alias" as const,
-        fingerprint:
-          "import-alias|agent/__tests__/claude-cli.test.ts|named|node:child_process|execFile|mockedExecFile",
-        message: "second",
-      },
-    ];
-
-    const { grandfathered, current } = filterBaselineViolations(
-      violations,
-      new Set([violations[0].fingerprint]),
-    );
-
-    expect(grandfathered).toEqual([violations[0]]);
-    expect(current).toEqual([violations[1]]);
-  });
 });

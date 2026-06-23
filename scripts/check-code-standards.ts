@@ -3,9 +3,8 @@
  * AST-based code standards gate for statement budgets and import/type naming rules.
  *
  * Uses the TypeScript Compiler API so comments, docstrings, blank lines, and
- * standalone braces stay out of the metric. Existing repo debt can be
- * grandfathered in `scripts/code-standards-baseline.txt`, but any new drift
- * still fails loudly in CI.
+ * standalone braces stay out of the metric. The public fork carries no
+ * grandfather list here; every surfaced violation is real current debt.
  *
  * Usage:
  *   node --import tsx scripts/check-code-standards.ts
@@ -24,8 +23,6 @@ import ts from "typescript";
 
 export const MAX_FUNCTION_STATEMENTS = 75;
 export const MAX_FILE_STATEMENTS = 200;
-export const CODE_STANDARDS_BASELINE_PATH = "scripts/code-standards-baseline.txt";
-
 export type CodeStandardsRule =
   | "function-budget"
   | "file-budget"
@@ -59,19 +56,6 @@ export function countStatementsInNode(node: ts.Node): number {
 
 export function normalizeRepoPath(filePath: string): string {
   return path.relative(process.cwd(), filePath).replace(/\\/g, "/");
-}
-
-export function loadBaselineEntries(
-  baselinePath = CODE_STANDARDS_BASELINE_PATH,
-): Set<string> {
-  if (!fs.existsSync(baselinePath)) return new Set();
-  return new Set(
-    fs
-      .readFileSync(baselinePath, "utf-8")
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => line && !line.startsWith("#")),
-  );
 }
 
 export function countFunctionsInFile(filePath: string): {
@@ -265,24 +249,6 @@ export async function resolveTargetFiles(targets: string[]): Promise<string[]> {
   );
 }
 
-export function filterBaselineViolations(
-  violations: CodeStandardsViolation[],
-  baselineEntries: Set<string>,
-): {
-  grandfathered: CodeStandardsViolation[];
-  current: CodeStandardsViolation[];
-} {
-  const grandfathered: CodeStandardsViolation[] = [];
-  const current: CodeStandardsViolation[] = [];
-
-  for (const violation of violations) {
-    if (baselineEntries.has(violation.fingerprint)) grandfathered.push(violation);
-    else current.push(violation);
-  }
-
-  return { grandfathered, current };
-}
-
 export async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const patterns = args.filter((arg) => !arg.startsWith("--"));
@@ -312,21 +278,12 @@ export async function main(): Promise<void> {
 
   allViolations.push(...collectUniqueTypeNameViolations(files));
 
-  const { grandfathered, current } = filterBaselineViolations(
-    allViolations,
-    loadBaselineEntries(),
-  );
-
-  for (const violation of current) {
+  for (const violation of allViolations) {
     console.log(violation.message);
   }
 
-  if (grandfathered.length > 0) {
-    console.log(`\nGrandfathered baseline violations: ${grandfathered.length}`);
-  }
-
-  console.log(`\n${current.length} code standards violations found.`);
-  process.exit(current.length === 0 ? 0 : 1);
+  console.log(`\n${allViolations.length} code standards violations found.`);
+  process.exit(allViolations.length === 0 ? 0 : 1);
 }
 
 function isCliEntryPoint(): boolean {
