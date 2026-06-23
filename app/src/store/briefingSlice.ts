@@ -20,7 +20,7 @@ import type {
 } from "@/domain/briefing";
 import {
   fetchBriefings,
-  triggerBriefing as apiTrigger,
+  triggerBriefing,
   fetchTriggerStatus,
   fetchBriefingList,
   fetchBriefingById,
@@ -209,7 +209,7 @@ export function createBriefingSlice(
       }
     },
 
-    async triggerBriefing() {
+    triggerBriefing: async () => {
       if (get().activeTrigger) return;
 
       const triggerType = get().activeType;
@@ -218,7 +218,7 @@ export function createBriefingSlice(
 
       let jobId: string;
       try {
-        const result = await apiTrigger({ type: triggerType, sessionId });
+        const result = await triggerBriefing({ type: triggerType, sessionId });
         jobId = result.jobId;
       } catch (err) {
         console.error("Trigger failed:", err);
@@ -250,9 +250,17 @@ export function createBriefingSlice(
             set({ activeTrigger: null, sessionMode: { type: "new" } });
           },
           onTimeout() {
+            toast(
+              "Briefing generation timed out. It may still finish — refresh to check.",
+              "warn",
+            );
             set({ activeTrigger: null, sessionMode: { type: "new" } });
           },
           onTerminalError() {
+            toast(
+              "Briefing generation stopped unexpectedly. Try generating again.",
+              "error",
+            );
             set({ activeTrigger: null, sessionMode: { type: "new" } });
           },
         },

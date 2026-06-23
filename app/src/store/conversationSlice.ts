@@ -20,19 +20,15 @@ import type { FollowUpJobStatus } from "@/domain/conversation";
 import { FollowUpError } from "@/domain/conversation/errors";
 import { assignConversationName } from "@/domain/conversation/conversation-name";
 import {
-  sendFollowUp as apiSendFollowUp,
-  fetchFollowUpStatus as apiFetchFollowUpStatus,
-  fetchConversationMessages as apiFetchMessages,
-  fetchConversationByBriefing as apiFetchConversationByBriefing,
-  createConversation as apiCreateConversation,
+  sendFollowUp,
+  fetchFollowUpStatus,
+  fetchConversationMessages,
+  fetchConversationByBriefing,
+  createConversation,
   EMPTY_HISTORY,
   mergeMessages,
 } from "@/domain/conversation";
-import {
-  pollForResult,
-  stopPolling,
-  stopAllPolling as stopAllActivePolls,
-} from "@/lib/polling";
+import { pollForResult, stopPolling, stopAllPolling } from "@/lib/polling";
 import { toast } from "@/lib/toast";
 
 /** Tracks which briefingId is currently being hydrated. Used to discard stale async responses
@@ -104,7 +100,7 @@ export interface ConversationSlice {
 // mergeMessages imported from @/domain/conversation
 
 /** Re-export stopAllPolling for auth cleanup in store/index.ts */
-export { stopAllActivePolls as stopAllPolling };
+export { stopAllPolling };
 
 /**
  * Cross-slice state fields this slice reads from ChatsSlice.
@@ -290,6 +286,7 @@ function handleFollowUpError(
     }
   } else {
     set({ followUpError: "Something went wrong. Try again." });
+    toast("Something went wrong. Try again.", "error");
   }
   // Clear this conversation's pending entry (keyed by historyKey)
   set(clearPending(get, historyKey));
@@ -325,7 +322,7 @@ export const CONVERSATION_INITIAL_STATE: Pick<
  * keeps large store wrapper functions small by lifting behavior into named helpers.
  */
 function createSendFollowUp({ get, set }: SliceStore): ConversationSlice["sendFollowUp"] {
-  return async function sendFollowUp({
+  return async ({
     briefingId,
     sessionId,
     question,
@@ -335,7 +332,7 @@ function createSendFollowUp({ get, set }: SliceStore): ConversationSlice["sendFo
     sessionId?: string;
     question: string;
     conversationId?: string;
-  }) {
+  }) => {
     let effectiveSessionId = sessionId;
     if (conversationId) {
       const conv = get().briefingConversations.find((c) => c.id === conversationId);
@@ -385,7 +382,7 @@ function createSendFollowUp({ get, set }: SliceStore): ConversationSlice["sendFo
     stopPolling(historyKey);
 
     try {
-      const res = await apiSendFollowUp({
+      const res = await sendFollowUp({
         briefingId,
         sessionId: effectiveSessionId ?? undefined,
         question,
@@ -423,10 +420,13 @@ function createSendFollowUp({ get, set }: SliceStore): ConversationSlice["sendFo
           },
           onFailed(error) {
             set({ followUpError: error, ...clearPending(get, historyKey) });
+            toast(error, "error");
           },
           onTimeout() {
+            const timeoutMessage =
+              "Response timed out. Claude may still be working — check back later.";
             if (conversationId) {
-              apiFetchMessages({ conversationId })
+              fetchConversationMessages({ conversationId })
                 .then((msgs) => {
                   if (msgs.length > 0 && msgs[msgs.length - 1].role === "assistant") {
                     set({
@@ -440,33 +440,34 @@ function createSendFollowUp({ get, set }: SliceStore): ConversationSlice["sendFo
                     return;
                   }
                   set({
-                    followUpError:
-                      "Response timed out. Claude may still be working — check back later.",
+                    followUpError: timeoutMessage,
                     ...clearPending(get, historyKey),
                   });
+                  toast(timeoutMessage, "warn");
                 })
                 .catch(() => {
                   set({
-                    followUpError:
-                      "Response timed out. Claude may still be working — check back later.",
+                    followUpError: timeoutMessage,
                     ...clearPending(get, historyKey),
                   });
+                  toast(timeoutMessage, "warn");
                 });
               return;
             }
 
             set({
-              followUpError:
-                "Response timed out. Claude may still be working — check back later.",
+              followUpError: timeoutMessage,
               ...clearPending(get, historyKey),
             });
+            toast(timeoutMessage, "warn");
           },
           onTerminalError(error) {
             set({ followUpError: error, ...clearPending(get, historyKey) });
+            toast(error, "error");
           },
         },
         (signal) =>
-          apiFetchFollowUpStatus({
+          fetchFollowUpStatus({
             jobId: res.jobId,
             conversationId: res.conversationId,
             briefingId: res.briefingId,
@@ -509,7 +510,7 @@ function createHydrateFollowUpHistory(
     });
 
     try {
-      const conversationListItems = await apiFetchConversationByBriefing({ briefingId });
+      const conversationListItems = await fetchConversationByBriefing({ briefingId });
       if (currentHydratingBriefingId !== briefingId) {
         set({
           followUpHydrating: { ...get().followUpHydrating, [briefingId]: false },
@@ -531,7 +532,7 @@ function createHydrateFollowUpHistory(
 
       const activeConversation = conversationListItems[0];
       const conversationHistoryKey = activeConversation.id;
-      const messages = await apiFetchMessages({ conversationId: activeConversation.id });
+      const messages = await fetchConversationMessages({ conversationId: activeConversation.id });
       if (currentHydratingBriefingId !== briefingId) {
         set({
           followUpHydrating: { ...get().followUpHydrating, [briefingId]: false },
@@ -561,8 +562,8 @@ function createHydrateFollowUpHistory(
 }
 
 function createConversationAction({ get, set }: SliceStore): ConversationSlice["createConversation"] {
-  return async function createConversation(briefingId?: string): Promise<ConversationListItem> {
-    const item = await apiCreateConversation({ briefingId });
+  return async (briefingId?: string): Promise<ConversationListItem> => {
+    const item = await createConversation({ briefingId });
     set({
       briefingConversations: [...get().briefingConversations, item],
       activeConversationId: item.id,
@@ -574,11 +575,11 @@ function createConversationAction({ get, set }: SliceStore): ConversationSlice["
 function createSetActiveConversation(
   { get, set }: SliceStore,
 ): ConversationSlice["setActiveConversation"] {
-  return async function setActiveConversation(conversationId: string) {
+  return async (conversationId: string) => {
     set({ activeConversationId: conversationId });
 
     try {
-      const messages = await apiFetchMessages({ conversationId });
+      const messages = await fetchConversationMessages({ conversationId });
       const historyKey = conversationId;
       set({
         followUpHistory: {
@@ -595,9 +596,9 @@ function createSetActiveConversation(
 function createFetchBriefingConversations(
   { get, set }: SliceStore,
 ): ConversationSlice["fetchBriefingConversations"] {
-  return async function fetchBriefingConversations(briefingId: string) {
+  return async (briefingId: string) => {
     try {
-      const convListItems = await apiFetchConversationByBriefing({ briefingId });
+      const convListItems = await fetchConversationByBriefing({ briefingId });
       set({ briefingConversations: convListItems });
       if (convListItems.length > 0 && !get().activeConversationId) {
         set({ activeConversationId: convListItems[0].id });

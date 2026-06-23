@@ -17,10 +17,10 @@
  */
 import type { Message, ConversationListItem } from '@/domain/conversation';
 import {
-  fetchConversations as apiFetchConversations,
-  fetchConversationMessages as apiFetchMessages,
-  updateConversationIdentity as apiUpdateConversationIdentity,
-  updateConversationName as apiUpdateConversationName,
+  fetchConversations,
+  fetchConversationMessages,
+  updateConversationIdentity,
+  updateConversationName,
 } from '@/domain/conversation';
 import type { ConversationIdentityUpdate } from '@/domain/conversation';
 
@@ -43,6 +43,7 @@ export interface ChatsSlice {
   // Actions
   fetchConversations: () => Promise<void>;
   selectConversation: (options: { conversation: ConversationListItem | null }) => Promise<void>;
+  refreshSelectedConversation: () => Promise<void>;
   clearSelectedConversation: () => void;
   renameConversation: (opts: { conversationId: string; name: string }) => Promise<void>;
   updateConversationIdentity: (opts: {
@@ -87,13 +88,13 @@ export function createChatsSlice(set: StoreSet, get: StoreGet): ChatsSlice {
   return {
     ...CHATS_INITIAL_STATE,
 
-    async fetchConversations() {
+    fetchConversations: async () => {
       const hasCachedConversations = get().conversationsLoaded;
       if (!hasCachedConversations) {
         set({ conversationsLoading: true });
       }
       try {
-        const list = await apiFetchConversations();
+        const list = await fetchConversations();
         set({
           conversations: list,
           conversationsLoading: false,
@@ -113,7 +114,7 @@ export function createChatsSlice(set: StoreSet, get: StoreGet): ChatsSlice {
       }
       set({ selectedConversation: conversation, selectedConversationLoading: true });
       try {
-        const messages = await apiFetchMessages({ conversationId: conversation.id });
+        const messages = await fetchConversationMessages({ conversationId: conversation.id });
         // Guard: if the user rapidly switched conversations, the selected conversation
         // may have changed while we were fetching. Only commit if still selected.
         if (get().selectedConversation?.id === conversation.id) {
@@ -127,12 +128,44 @@ export function createChatsSlice(set: StoreSet, get: StoreGet): ChatsSlice {
       }
     },
 
+    async refreshSelectedConversation() {
+      const selectedConversation = get().selectedConversation;
+      if (!selectedConversation) return;
+
+      const hasCachedMessages = get().selectedConversationMessages.length > 0;
+      if (!hasCachedMessages) {
+        set({ selectedConversationLoading: true });
+      }
+
+      try {
+        const messages = await fetchConversationMessages({ conversationId: selectedConversation.id });
+        if (get().selectedConversation?.id === selectedConversation.id) {
+          set({
+            selectedConversationMessages: messages,
+            selectedConversationLoading: false,
+          });
+        }
+      } catch {
+        if (get().selectedConversation?.id === selectedConversation.id) {
+          if (hasCachedMessages) {
+            set({ selectedConversationLoading: false });
+          } else {
+            set({
+              selectedConversation: null,
+              selectedConversationMessages: [],
+              selectedConversationLoading: false,
+            });
+          }
+        }
+      }
+    },
+
     clearSelectedConversation() {
       set({ selectedConversation: null, selectedConversationMessages: [], selectedConversationLoading: false });
     },
 
     async renameConversation({ conversationId, name }: { conversationId: string; name: string }) {
-      await apiUpdateConversationName({ conversationId, name });
+      await updateConversationName({ conversationId, name });
       const current = get();
       set({
         conversations: current.conversations.map(conversation =>
@@ -153,7 +186,7 @@ export function createChatsSlice(set: StoreSet, get: StoreGet): ChatsSlice {
       conversationId: string;
       identity: ConversationIdentityUpdate;
     }) {
-      const updated = await apiUpdateConversationIdentity({ conversationId, identity });
+      const updated = await updateConversationIdentity({ conversationId, identity });
       const current = get();
       set({
         conversations: current.conversations.map((conversation) =>
