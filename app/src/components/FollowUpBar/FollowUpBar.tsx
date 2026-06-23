@@ -134,6 +134,7 @@ export function FollowUpBar({
         <ChatInput
           onSubmit={handleSend}
           disabled={loading}
+          busy={loading}
           prefill={prefillQuestion}
           onPrefillConsumed={() => setPrefillQuestion(null)}
         />

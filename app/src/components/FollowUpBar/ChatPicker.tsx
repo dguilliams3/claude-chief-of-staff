@@ -21,6 +21,7 @@ export function ChatPicker({ briefingId }: { briefingId: string }) {
   const followUpBarError = useStore((s) => s.followUpBarErrors[briefingId] ?? null);
 
   const [open, setOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
@@ -58,11 +59,15 @@ export function ChatPicker({ briefingId }: { briefingId: string }) {
   }
 
   async function handleNewChat() {
+    if (isCreating) return;
     try {
+      setIsCreating(true);
       await createConversation(briefingId);
       setOpen(false);
     } catch {
       // Visible error is rendered from store state. Keep the picker open.
+    } finally {
+      setIsCreating(false);
     }
   }
 
@@ -123,9 +128,20 @@ export function ChatPicker({ briefingId }: { briefingId: string }) {
           <button
             type="button"
             onClick={handleNewChat}
-            className="flex items-center w-full px-3 py-2 min-h-10 text-sm text-accent hover:bg-surface-raised transition-colors border-t border-border-subtle"
+            disabled={isCreating}
+            className="flex items-center gap-1.5 w-full px-3 py-2 min-h-10 text-sm text-accent hover:bg-surface-raised transition-colors border-t border-border-subtle disabled:opacity-50"
           >
-            + New Chat
+            {isCreating ? (
+              <>
+                <span
+                  aria-hidden="true"
+                  className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-accent/30 border-t-accent"
+                />
+                Starting
+              </>
+            ) : (
+              '+ New Chat'
+            )}
           </button>
         </div>
       )}
