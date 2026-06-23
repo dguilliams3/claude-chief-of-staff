@@ -9,8 +9,9 @@
  * See also: `app/src/store/conversationSlice.ts` -- conversations state and actions
  * Do NOT: Fetch data directly -- store handles API calls and state updates
  */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '@/store';
+import { SurfaceState } from '@/components/SurfaceState';
 import { ConversationDetail } from './ConversationDetail';
 import type { ConversationListItem } from '@/domain/conversation';
 import { formatTokens } from '@/lib/formatTokens';
@@ -18,10 +19,12 @@ import { formatTokens } from '@/lib/formatTokens';
 export function ChatsView() {
   const conversations = useStore((s) => s.conversations);
   const loading = useStore((s) => s.conversationsLoading);
+  const conversationsError = useStore((s) => s.conversationsError);
   const selected = useStore((s) => s.selectedConversation);
   const fetchConversations = useStore((s) => s.fetchConversations);
   const selectConversation = useStore((s) => s.selectConversation);
   const createConversation = useStore((s) => s.createConversation);
+  const [createConversationError, setCreateConversationError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchConversations();
@@ -37,12 +40,27 @@ export function ChatsView() {
 
   async function handleNewChat() {
     try {
+      setCreateConversationError(null);
       const item = await createConversation();
       fetchConversations().catch(() => {});
       selectConversation({ conversation: item });
     } catch {
-      // Silently fail -- user can retry.
+      setCreateConversationError('Could not start a new chat. Try again.');
     }
+  }
+
+  if (conversationsError && conversations.length === 0) {
+    return (
+      <SurfaceState title="Couldn't load chats" message={conversationsError} tone="error">
+        <button
+          type="button"
+          onClick={() => void fetchConversations()}
+          className="inline-flex min-h-10 items-center rounded-card bg-accent px-4 py-2 text-sm font-medium text-surface transition-all duration-200 hover:brightness-110"
+        >
+          Retry
+        </button>
+      </SurfaceState>
+    );
   }
 
   if (conversations.length === 0) {
@@ -50,9 +68,13 @@ export function ChatsView() {
       <div className="p-4 text-center">
         <p className="text-sm text-primary">No conversations yet.</p>
         <p className="mb-4 mt-1 text-xs text-muted">Start one to ask a follow-up about a briefing.</p>
+        {createConversationError ? (
+          <p className="mb-3 text-xs text-severity-flag">{createConversationError}</p>
+        ) : null}
         <button
+          type="button"
           onClick={handleNewChat}
-          className="text-sm text-accent transition-colors hover:text-accent/80"
+          className="inline-flex items-center min-h-10 px-3 text-sm text-accent transition-colors hover:text-accent/80"
         >
           + New Chat
         </button>
@@ -63,6 +85,7 @@ export function ChatsView() {
   return (
     <div className="flex flex-col divide-y divide-border-subtle">
       <button
+        type="button"
         onClick={handleNewChat}
         className="flex items-center gap-2 p-4 text-sm text-accent transition-colors hover:bg-surface-raised active:bg-surface"
       >
@@ -129,6 +152,7 @@ function ConversationRow({ conversation, onSelect }: {
 
   return (
     <button
+      type="button"
       onClick={onSelect}
       className="flex items-center justify-between p-4 text-left transition-colors hover:bg-surface-raised active:bg-surface"
     >
@@ -143,14 +167,17 @@ function ConversationRow({ conversation, onSelect }: {
           ) : null}
           <span className="text-xs text-muted">
             {conversation.messageCount} message{conversation.messageCount !== 1 ? 's' : ''}
-            <span className="mx-1 text-border">|</span>
+            <span aria-hidden="true" className="mx-1 text-border">|</span>
             <span className="font-mono">{tokenDisplay}</span>
           </span>
         </div>
       </div>
       <div className="flex items-center gap-2">
         {isPending && (
-          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-muted/30 border-t-accent" />
+          <span
+            aria-hidden="true"
+            className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-muted/30 border-t-accent"
+          />
         )}
         <span className="text-xs text-muted">{timeStr}</span>
       </div>

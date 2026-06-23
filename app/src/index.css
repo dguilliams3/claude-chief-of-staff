@@ -153,6 +153,10 @@ body::before {
   font-size: 0.9rem;
   line-height: 1.65;
   color: var(--color-secondary);
+  /* Narrow-viewport guard: long unbroken strings (URLs, IDs, tokens) must wrap
+     instead of forcing horizontal page scroll on small screens. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .prose-briefing h1,
@@ -225,6 +229,11 @@ body::before {
   border-collapse: collapse;
   margin: 0.75em 0;
   font-size: 0.82rem;
+  /* Narrow-viewport guard: a wide table scrolls horizontally within the card
+     instead of widening the whole page. `display: block` lets overflow-x take
+     effect since react-markdown renders the bare <table> with no wrapper. */
+  display: block;
+  overflow-x: auto;
 }
 
 .prose-briefing thead th {

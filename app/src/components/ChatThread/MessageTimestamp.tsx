@@ -13,10 +13,14 @@ interface MessageTimestampProps {
 
 export function MessageTimestamp({ createdAt }: MessageTimestampProps) {
   const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return null;
   const isToday = date.toDateString() === new Date().toDateString();
+  // Older messages show date + time. Time fields (hour/minute) require
+  // toLocaleString — toLocaleDateString silently drops them, so the older-message
+  // branch must not use toLocaleDateString here.
   const formatted = isToday
     ? date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
-    : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    : date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
   return <p className="font-mono text-[9px] text-muted mt-0.5 px-1">{formatted}</p>;
 }

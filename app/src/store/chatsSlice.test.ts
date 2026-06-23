@@ -78,9 +78,11 @@ describe('initial state', () => {
     expect(get().conversations).toEqual([]);
     expect(get().conversationsLoading).toBe(false);
     expect(get().conversationsLoaded).toBe(false);
+    expect(get().conversationsError).toBeNull();
     expect(get().selectedConversation).toBeNull();
     expect(get().selectedConversationMessages).toEqual([]);
     expect(get().selectedConversationLoading).toBe(false);
+    expect(get().selectedConversationError).toBeNull();
     expect(get().conversationErrors).toEqual({});
   });
 });
@@ -110,6 +112,7 @@ describe('fetchConversations', () => {
 
     expect(get().conversationsLoading).toBe(false);
     expect(get().conversationsLoaded).toBe(false);
+    expect(get().conversationsError).toBe('Could not load chats. Try again.');
   });
 
   it('keeps cached conversations visible during a refresh', async () => {
@@ -174,14 +177,15 @@ describe('selectConversation', () => {
     expect(get().selectedConversationMessages).toEqual([]);
   });
 
-  it('clears selection on fetch failure', async () => {
+  it('keeps selection and surfaces an error on fetch failure', async () => {
     mockFetchMessages.mockRejectedValueOnce(new Error('down'));
 
     const { get } = createTestSlice();
     await get().selectConversation({ conversation: makeConversationListItem() });
 
-    expect(get().selectedConversation).toBeNull();
+    expect(get().selectedConversation).not.toBeNull();
     expect(get().selectedConversationLoading).toBe(false);
+    expect(get().selectedConversationError).toBe('Could not open that chat. Try again.');
   });
 });
 
@@ -201,6 +205,45 @@ describe('clearSelectedConversation', () => {
 
     expect(get().selectedConversation).toBeNull();
     expect(get().selectedConversationMessages).toEqual([]);
+  });
+});
+
+describe('refreshSelectedConversation', () => {
+  it('refreshes the selected conversation without clearing cached messages on success', async () => {
+    const conversation = makeConversationListItem();
+    const cachedMessages = [makeMessage({ id: 'cached-message' })];
+    const freshMessages = [makeMessage({ id: 'fresh-message' })];
+    mockFetchMessages.mockResolvedValueOnce(freshMessages);
+
+    const { get, set } = createTestSlice();
+    set({
+      selectedConversation: conversation,
+      selectedConversationMessages: cachedMessages,
+    });
+
+    await get().refreshSelectedConversation();
+
+    expect(get().selectedConversation).toEqual(conversation);
+    expect(get().selectedConversationMessages).toEqual(freshMessages);
+    expect(get().selectedConversationLoading).toBe(false);
+  });
+
+  it('keeps cached messages visible when refresh fails', async () => {
+    const conversation = makeConversationListItem();
+    const cachedMessages = [makeMessage({ id: 'cached-message' })];
+    mockFetchMessages.mockRejectedValueOnce(new Error('down'));
+
+    const { get, set } = createTestSlice();
+    set({
+      selectedConversation: conversation,
+      selectedConversationMessages: cachedMessages,
+    });
+
+    await get().refreshSelectedConversation();
+
+    expect(get().selectedConversation).toEqual(conversation);
+    expect(get().selectedConversationMessages).toEqual(cachedMessages);
+    expect(get().selectedConversationLoading).toBe(false);
   });
 });
 

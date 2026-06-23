@@ -3,13 +3,37 @@ import { useStore } from "@/store";
 import { SectionCard } from "@/components/SectionCard";
 import { FollowUpBar } from "@/components/FollowUpBar";
 import { RunningBanner } from "@/components/RunningBanner";
+import { SurfaceState } from "@/components/SurfaceState";
 
 export function TodayView() {
   const activeType = useStore((s) => s.activeType);
   const briefing = useStore((s) => s.briefings[s.activeType]);
+  const briefingsError = useStore((s) => s.briefingsError);
   const activeTrigger = useStore((s) => s.activeTrigger);
   const triggerBriefing = useStore((s) => s.triggerBriefing);
+  const refresh = useStore((s) => s.refresh);
   const showBanner = activeTrigger?.type === activeType;
+
+  if (!briefing && briefingsError) {
+    return (
+      <div className="flex-1 flex flex-col min-h-0">
+        {showBanner && <RunningBanner />}
+        <SurfaceState
+          title={`Couldn't load the ${activeType} briefing`}
+          message={briefingsError}
+          tone="error"
+        >
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            className="inline-flex min-h-10 items-center rounded-card bg-accent px-4 py-2 text-sm font-medium text-surface transition-all duration-200 hover:brightness-110"
+          >
+            Retry
+          </button>
+        </SurfaceState>
+      </div>
+    );
+  }
 
   // Empty state — no briefing for this type
   if (!briefing) {
@@ -22,10 +46,11 @@ export function TodayView() {
               No {activeType} briefing yet.
             </p>
             <button
+              type="button"
               onClick={triggerBriefing}
               disabled={!!activeTrigger}
               className="
-                px-5 py-2 rounded-card
+                px-5 py-2.5 min-h-10 rounded-card
                 bg-accent text-surface
                 text-sm font-medium font-mono
                 disabled:opacity-40

@@ -13,13 +13,16 @@
  */
 import { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/store';
+import { SurfaceState } from '@/components/SurfaceState';
 import { ChatThread, ChatInput } from '@/components/ChatThread';
 
 export function ConversationDetail() {
   const selected = useStore((s) => s.selectedConversation);
   const messages = useStore((s) => s.selectedConversationMessages);
   const loading = useStore((s) => s.selectedConversationLoading);
+  const selectedConversationError = useStore((s) => s.selectedConversationError);
   const clearSelected = useStore((s) => s.clearSelectedConversation);
+  const refreshSelectedConversation = useStore((s) => s.refreshSelectedConversation);
   const sendFollowUp = useStore((s) => s.sendFollowUp);
   const pendingFollowUps = useStore((s) => s.pendingFollowUps);
   const error = useStore((s) => s.conversationErrors[selected?.id ?? '']);
@@ -123,10 +126,14 @@ export function ConversationDetail() {
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 border-b border-border-subtle p-3 shrink-0">
         <button
+          type="button"
           onClick={clearSelected}
-          className="text-sm text-muted hover:text-primary"
+          className="inline-flex items-center min-h-10 px-1 -ml-1 text-sm text-muted hover:text-primary transition-colors"
         >
-          &larr; Back
+          <span aria-hidden="true" className="mr-1">
+            &larr;
+          </span>
+          Back
         </button>
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-raised text-base">
           {headerAvatar}
@@ -140,7 +147,7 @@ export function ConversationDetail() {
               onChange={(e) => setDisplayNameValue(e.target.value)}
               onBlur={() => void commitIdentity()}
               onKeyDown={handleIdentityKeyDown}
-              className="min-w-0 border-b border-border-subtle bg-transparent text-sm font-medium text-primary outline-none"
+              className="min-w-0 border-b border-border-subtle bg-transparent text-sm font-medium text-primary focus:border-accent"
               aria-label="Citizen display name"
               placeholder="Citizen name"
             />
@@ -150,7 +157,7 @@ export function ConversationDetail() {
               onChange={(e) => setTaglineValue(e.target.value)}
               onBlur={() => void commitIdentity()}
               onKeyDown={handleIdentityKeyDown}
-              className="min-w-0 border-b border-border-subtle bg-transparent text-xs text-muted outline-none"
+              className="min-w-0 border-b border-border-subtle bg-transparent text-xs text-muted focus:border-accent"
               aria-label="Citizen tagline"
               placeholder="Tagline"
             />
@@ -160,7 +167,7 @@ export function ConversationDetail() {
               onChange={(e) => setAvatarValue(e.target.value)}
               onBlur={() => void commitIdentity()}
               onKeyDown={handleIdentityKeyDown}
-              className="min-w-0 border-b border-border-subtle bg-transparent text-xs text-muted outline-none"
+              className="min-w-0 border-b border-border-subtle bg-transparent text-xs text-muted focus:border-accent"
               aria-label="Citizen avatar"
               placeholder="e.g. 🤖"
             />
@@ -168,6 +175,7 @@ export function ConversationDetail() {
         ) : (
           <div className="flex min-w-0 flex-1 flex-col">
             <button
+              type="button"
               onClick={handleIdentityClick}
               className="truncate text-left text-sm font-medium text-primary transition-opacity hover:opacity-70"
               title="Edit citizen identity"
@@ -181,8 +189,9 @@ export function ConversationDetail() {
         )}
         {conversation.sessionId && (
           <button
+            type="button"
             onClick={handleCopySessionId}
-            className="rounded border border-border-subtle px-1.5 py-0.5 text-xs text-muted transition-colors hover:text-primary"
+            className="shrink-0 inline-flex items-center rounded border border-border-subtle px-2 min-h-10 text-xs text-muted transition-colors hover:text-primary"
             title={`Copy session ID: ${conversation.sessionId}`}
           >
             {copied ? 'Copied!' : 'Session ID'}
@@ -190,13 +199,29 @@ export function ConversationDetail() {
         )}
       </div>
 
-      <ChatThread
-        messages={messages}
-        showTimestamps={true}
-        isLoading={isThisPending}
-        loadingStartedAt={pendingFollowUp?.startedAt}
-        className="flex-1 p-3"
-      />
+      {selectedConversationError && messages.length === 0 ? (
+        <SurfaceState
+          title="Couldn't load this chat"
+          message={selectedConversationError}
+          tone="error"
+        >
+          <button
+            type="button"
+            onClick={() => void refreshSelectedConversation()}
+            className="inline-flex min-h-10 items-center rounded-card bg-accent px-4 py-2 text-sm font-medium text-surface transition-all duration-200 hover:brightness-110"
+          >
+            Retry
+          </button>
+        </SurfaceState>
+      ) : (
+        <ChatThread
+          messages={messages}
+          showTimestamps={true}
+          isLoading={isThisPending}
+          loadingStartedAt={pendingFollowUp?.startedAt}
+          className="flex-1 p-3"
+        />
+      )}
 
       {error ? (
         <div className="border-t border-border-subtle bg-surface p-3 text-center text-xs text-muted">

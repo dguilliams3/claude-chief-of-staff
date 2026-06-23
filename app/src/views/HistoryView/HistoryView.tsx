@@ -15,6 +15,7 @@ import { useStore } from '@/store';
 import { BriefingList } from '@/components/BriefingList';
 import { SectionCard } from '@/components/SectionCard';
 import { Skeleton } from '@/components/Skeleton';
+import { SurfaceState } from '@/components/SurfaceState';
 import { generateAndDownloadPdf } from '@/lib/export';
 
 /**
@@ -30,14 +31,46 @@ import { generateAndDownloadPdf } from '@/lib/export';
 export function HistoryView() {
   const historyList = useStore((s) => s.historyList);
   const historyLoading = useStore((s) => s.historyLoading);
+  const historyError = useStore((s) => s.historyError);
   const fetchHistory = useStore((s) => s.fetchHistory);
   const selectedBriefing = useStore((s) => s.selectedBriefing);
   const selectedBriefingId = useStore((s) => s.selectedBriefingId);
+  const selectedBriefingError = useStore((s) => s.selectedBriefingError);
   const selectBriefing = useStore((s) => s.selectBriefing);
 
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);
+
+  if (selectedBriefingId && !selectedBriefing && selectedBriefingError) {
+    return (
+      <div className="flex flex-col min-h-[calc(100dvh-80px)]">
+        <div className="px-5 pt-4 pb-2">
+          <button
+            type="button"
+            onClick={() => void selectBriefing({ id: null })}
+            className="-ml-1 inline-flex items-center gap-1.5 min-h-10 px-1 text-sm text-muted hover:text-primary transition-colors"
+          >
+            <ArrowLeft size={16} aria-hidden="true" />
+            <span>Back to list</span>
+          </button>
+        </div>
+        <SurfaceState
+          title="Couldn't open that briefing"
+          message={selectedBriefingError}
+          tone="error"
+        >
+          <button
+            type="button"
+            onClick={() => void selectBriefing({ id: selectedBriefingId })}
+            className="inline-flex min-h-10 items-center rounded-card bg-accent px-4 py-2 text-sm font-medium text-surface transition-all duration-200 hover:brightness-110"
+          >
+            Retry
+          </button>
+        </SurfaceState>
+      </div>
+    );
+  }
 
   // Loading state for selected briefing (ID set but data still fetching).
   // Skeleton mirrors the detail layout: header (back link, title, timestamp,
@@ -89,10 +122,11 @@ export function HistoryView() {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <button
+                type="button"
                 onClick={() => selectBriefing({ id: null })}
-                className="flex items-center gap-1.5 text-sm text-muted hover:text-primary transition-colors mb-3"
+                className="-ml-1 inline-flex items-center gap-1.5 min-h-10 px-1 text-sm text-muted hover:text-primary transition-colors mb-2"
               >
-                <ArrowLeft size={16} />
+                <ArrowLeft size={16} aria-hidden="true" />
                 <span>Back to list</span>
               </button>
               <h2 className="font-body font-semibold text-lg text-primary">
@@ -103,11 +137,12 @@ export function HistoryView() {
               </p>
             </div>
             <button
+              type="button"
               onClick={() => void generateAndDownloadPdf(selectedBriefing)}
-              className="shrink-0 inline-flex items-center gap-1.5 rounded-card border border-border-subtle px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-muted transition-colors hover:text-accent"
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-card border border-border-subtle px-3 py-2 min-h-10 text-xs font-mono uppercase tracking-wider text-muted transition-colors hover:text-accent"
               aria-label="Download this briefing as a PDF"
             >
-              <Download size={13} />
+              <Download size={13} aria-hidden="true" />
               <span>PDF</span>
             </button>
           </div>
@@ -146,6 +181,24 @@ export function HistoryView() {
           ))}
         </div>
       </div>
+    );
+  }
+
+  if (historyError && historyList.length === 0) {
+    return (
+      <SurfaceState
+        title="Couldn't load briefing history"
+        message={historyError}
+        tone="error"
+      >
+        <button
+          type="button"
+          onClick={() => void fetchHistory()}
+          className="inline-flex min-h-10 items-center rounded-card bg-accent px-4 py-2 text-sm font-medium text-surface transition-all duration-200 hover:brightness-110"
+        >
+          Retry
+        </button>
+      </SurfaceState>
     );
   }
 

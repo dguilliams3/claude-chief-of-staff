@@ -9,22 +9,33 @@
  * See also: `app/src/store/index.ts` -- auth and view state consumed here
  * Do NOT: Add React Router -- view switching is intentionally store-driven
  */
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { useStore } from "@/store";
 import { AppHeader } from "@/components/AppHeader";
 import { TodayView } from "@/views/TodayView";
 import { LoginScreen } from "@/views/LoginScreen";
 import { ToastContainer } from "@/components/Toast/Toast";
 
+type IdleCallbackHandle = number;
+
+type IdleWindow = Window & {
+  requestIdleCallback?: (callback: () => void) => IdleCallbackHandle;
+  cancelIdleCallback?: (handle: IdleCallbackHandle) => void;
+};
+
+const loadHistoryView = () => import("@/views/HistoryView");
 const HistoryView = lazy(async () => {
-  const module = await import("@/views/HistoryView");
+  const module = await loadHistoryView();
   return { default: module.HistoryView };
 });
 
+const loadChatsView = () => import("@/views/ChatsView");
 const ChatsView = lazy(async () => {
-  const module = await import("@/views/ChatsView");
+  const module = await loadChatsView();
   return { default: module.ChatsView };
 });
+
+let nonDefaultViewsPrewarmed = false;
 
 /**
  * Root component that gates on authentication state.
@@ -56,6 +67,8 @@ export default function App() {
 function AppShell() {
   const view = useStore((s) => s.view);
   const loading = useStore((s) => s.loading);
+
+  useWarmNonDefaultViews({ enabled: !loading });
 
   if (loading) {
     return (
@@ -92,6 +105,29 @@ function AppShell() {
       <ToastContainer />
     </div>
   );
+}
+
+function useWarmNonDefaultViews({ enabled }: { enabled: boolean }) {
+  useEffect(() => {
+    if (!enabled || nonDefaultViewsPrewarmed || typeof window === "undefined") {
+      return;
+    }
+
+    const prewarm = () => {
+      nonDefaultViewsPrewarmed = true;
+      void loadHistoryView();
+      void loadChatsView();
+    };
+
+    const idleWindow = window as IdleWindow;
+    if (typeof idleWindow.requestIdleCallback === "function") {
+      const handle = idleWindow.requestIdleCallback(prewarm);
+      return () => idleWindow.cancelIdleCallback?.(handle);
+    }
+
+    const timeoutHandle = window.setTimeout(prewarm, 1200);
+    return () => window.clearTimeout(timeoutHandle);
+  }, [enabled]);
 }
 
 /**

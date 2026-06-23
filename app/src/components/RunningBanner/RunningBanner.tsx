@@ -55,14 +55,16 @@ export function RunningBanner() {
       {timedOut && (
         <div className="flex gap-3 mt-2">
           <button
+            type="button"
             onClick={() => { cancelTrigger(); void triggerBriefing(); }}
-            className="font-mono text-xs px-3 py-1 rounded bg-accent/20 text-accent hover:bg-accent/30"
+            className="font-mono text-xs px-3 min-h-10 inline-flex items-center rounded bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
           >
             Retry
           </button>
           <button
+            type="button"
             onClick={cancelTrigger}
-            className="font-mono text-xs px-3 py-1 rounded bg-surface-raised text-muted hover:text-primary"
+            className="font-mono text-xs px-3 min-h-10 inline-flex items-center rounded bg-surface-raised text-muted hover:text-primary transition-colors"
           >
             Dismiss
           </button>

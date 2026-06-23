@@ -20,6 +20,7 @@ import {
   createConversation,
   updateConversationName,
 } from '@/domain/conversation';
+import { resetConversationApiCacheForTests } from './api';
 import { FollowUpError, ConversationError } from '@/domain/conversation/errors';
 import type { Message, ConversationListItem, FollowUpResponse } from '@/domain/conversation';
 
@@ -63,6 +64,7 @@ let fetchSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
   fetchSpy = vi.spyOn(globalThis, 'fetch');
   setAuthToken(''); // reset between tests
+  resetConversationApiCacheForTests();
 });
 
 afterEach(() => {
@@ -241,6 +243,35 @@ describe('fetchConversations', () => {
     fetchSpy.mockResolvedValueOnce(errorResponse(500));
     await expect(fetchConversations()).rejects.toThrow(ConversationError);
   });
+
+  it('reuses cached list data on 304 with a stored ETag', async () => {
+    fetchSpy
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([mockConversationListItem]), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', ETag: '"conversations-v1"' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 304,
+          headers: { ETag: '"conversations-v1"' },
+        }),
+      );
+
+    const first = await fetchConversations();
+    const second = await fetchConversations();
+
+    expect(first).toEqual([mockConversationListItem]);
+    expect(second).toEqual([mockConversationListItem]);
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      `${API_BASE}/conversations`,
+      expect.objectContaining({
+        headers: expect.objectContaining({ 'If-None-Match': '"conversations-v1"' }),
+      }),
+    );
+  });
 });
 
 // ============================================================
@@ -264,6 +295,35 @@ describe('fetchConversationMessages', () => {
   it('throws ConversationError on 401', async () => {
     fetchSpy.mockResolvedValueOnce(errorResponse(401));
     await expect(fetchConversationMessages({ conversationId: 'c' })).rejects.toThrow(ConversationError);
+  });
+
+  it('reuses cached messages on 304 with a stored ETag', async () => {
+    fetchSpy
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([mockMessage]), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', ETag: '"messages-c-001"' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 304,
+          headers: { ETag: '"messages-c-001"' },
+        }),
+      );
+
+    const first = await fetchConversationMessages({ conversationId: 'c-001' });
+    const second = await fetchConversationMessages({ conversationId: 'c-001' });
+
+    expect(first).toEqual([mockMessage]);
+    expect(second).toEqual([mockMessage]);
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      `${API_BASE}/conversations/c-001/messages`,
+      expect.objectContaining({
+        headers: expect.objectContaining({ 'If-None-Match': '"messages-c-001"' }),
+      }),
+    );
   });
 });
 
@@ -294,6 +354,35 @@ describe('fetchConversationByBriefing', () => {
   it('throws ConversationError on server error', async () => {
     fetchSpy.mockResolvedValueOnce(errorResponse(503));
     await expect(fetchConversationByBriefing({ briefingId: 'b' })).rejects.toThrow(ConversationError);
+  });
+
+  it('reuses cached briefing-linked conversation data on 304 with a stored ETag', async () => {
+    fetchSpy
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([mockConversationListItem]), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', ETag: '"briefing-conversations-b-001"' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 304,
+          headers: { ETag: '"briefing-conversations-b-001"' },
+        }),
+      );
+
+    const first = await fetchConversationByBriefing({ briefingId: 'b-001' });
+    const second = await fetchConversationByBriefing({ briefingId: 'b-001' });
+
+    expect(first).toEqual([mockConversationListItem]);
+    expect(second).toEqual([mockConversationListItem]);
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      `${API_BASE}/conversations/by-briefing/b-001`,
+      expect.objectContaining({
+        headers: expect.objectContaining({ 'If-None-Match': '"briefing-conversations-b-001"' }),
+      }),
+    );
   });
 });
 
