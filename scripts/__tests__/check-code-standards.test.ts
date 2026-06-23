@@ -3,7 +3,10 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
+  collectImportAliasViolations,
+  collectUniqueTypeNameViolations,
   countFunctionsInFile,
+  filterBaselineViolations,
   main,
   MAX_FILE_STATEMENTS,
   MAX_FUNCTION_STATEMENTS,
@@ -130,5 +133,72 @@ ${makeStatements(MAX_FUNCTION_STATEMENTS + 2, "  ")}
         statementCount: 1,
       }),
     );
+  });
+
+  it("flags aliased imports outside the baseline", () => {
+    const filePath = writeFixture(
+      "import-alias.ts",
+      `import { stopAllPolling as stopConversationPolling } from "./conversation";
+`,
+    );
+
+    expect(collectImportAliasViolations(filePath)).toEqual([
+      expect.objectContaining({
+        rule: "import-alias",
+        fingerprint:
+          expect.stringContaining(
+            "import-alias|",
+          ),
+      }),
+    ]);
+  });
+
+  it("flags duplicate exported type names across files", () => {
+    const firstPath = writeFixture(
+      "first.ts",
+      `export interface ConversationIdentityUpdate {
+  id: string;
+}
+`,
+    );
+    const secondPath = writeFixture(
+      "second.ts",
+      `export type ConversationIdentityUpdate = {
+  id: string;
+};
+`,
+    );
+
+    const violations = collectUniqueTypeNameViolations([firstPath, secondPath]);
+
+    expect(violations).toHaveLength(2);
+    expect(
+      violations.every((violation) => violation.rule === "unique-type-name"),
+    ).toBe(true);
+  });
+
+  it("grandfathers exact baseline fingerprints but fails on new ones", () => {
+    const violations = [
+      {
+        rule: "import-alias" as const,
+        fingerprint:
+          "import-alias|app/src/store/authSlice.ts|named|./conversationSlice|stopAllPolling|stopConversationPolling",
+        message: "first",
+      },
+      {
+        rule: "import-alias" as const,
+        fingerprint:
+          "import-alias|agent/__tests__/claude-cli.test.ts|named|node:child_process|execFile|mockedExecFile",
+        message: "second",
+      },
+    ];
+
+    const { grandfathered, current } = filterBaselineViolations(
+      violations,
+      new Set([violations[0].fingerprint]),
+    );
+
+    expect(grandfathered).toEqual([violations[0]]);
+    expect(current).toEqual([violations[1]]);
   });
 });
