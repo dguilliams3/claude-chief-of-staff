@@ -229,7 +229,7 @@ export function ConversationDetail() {
         </div>
       ) : (
         <div className="border-t border-border-subtle">
-          <ChatInput onSubmit={handleSend} disabled={isThisPending || loading} />
+          <ChatInput onSubmit={handleSend} disabled={isThisPending || loading} busy={isThisPending} />
         </div>
       )}
     </div>

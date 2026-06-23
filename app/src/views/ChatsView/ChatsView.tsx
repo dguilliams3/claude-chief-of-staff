@@ -25,6 +25,7 @@ export function ChatsView() {
   const selectConversation = useStore((s) => s.selectConversation);
   const createConversation = useStore((s) => s.createConversation);
   const [createConversationError, setCreateConversationError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     fetchConversations();
@@ -39,13 +40,17 @@ export function ChatsView() {
   }
 
   async function handleNewChat() {
+    if (isCreating) return;
     try {
       setCreateConversationError(null);
+      setIsCreating(true);
       const item = await createConversation();
       fetchConversations().catch(() => {});
       selectConversation({ conversation: item });
     } catch {
       setCreateConversationError('Could not start a new chat. Try again.');
+    } finally {
+      setIsCreating(false);
     }
   }
 
@@ -74,9 +79,20 @@ export function ChatsView() {
         <button
           type="button"
           onClick={handleNewChat}
-          className="inline-flex items-center min-h-10 px-3 text-sm text-accent transition-colors hover:text-accent/80"
+          disabled={isCreating}
+          className="inline-flex items-center gap-1.5 min-h-10 px-3 text-sm text-accent transition-colors hover:text-accent/80 disabled:opacity-50"
         >
-          + New Chat
+          {isCreating ? (
+            <>
+              <span
+                aria-hidden="true"
+                className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-accent/30 border-t-accent"
+              />
+              Starting
+            </>
+          ) : (
+            '+ New Chat'
+          )}
         </button>
       </div>
     );
@@ -87,9 +103,20 @@ export function ChatsView() {
       <button
         type="button"
         onClick={handleNewChat}
-        className="flex items-center gap-2 p-4 text-sm text-accent transition-colors hover:bg-surface-raised active:bg-surface"
+        disabled={isCreating}
+        className="flex items-center gap-1.5 p-4 text-sm text-accent transition-colors hover:bg-surface-raised active:bg-surface disabled:opacity-50"
       >
-        + New Chat
+        {isCreating ? (
+          <>
+            <span
+              aria-hidden="true"
+              className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-accent/30 border-t-accent"
+            />
+            Starting
+          </>
+        ) : (
+          '+ New Chat'
+        )}
       </button>
       {conversations.map((conv) => (
         <ConversationRow
