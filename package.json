@@ -20,10 +20,10 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "concurrently": "^10.0.3",
-    "eslint": "^10.7.0",
-    "globals": "^17.7.0",
-    "typescript-eslint": "^8.63.0",
+    "concurrently": "^10.0.4",
+    "eslint": "^10.8.0",
+    "globals": "^17.9.0",
+    "typescript-eslint": "^8.66.0",
     "vitest": "^4.1.10"
   }
 }
