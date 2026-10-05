@@ -16,7 +16,7 @@
     "news": "tsx cli.ts news --new-session"
   },
   "dependencies": {
-    "dotenv": "^17.4.2",
+    "dotenv": "^18.0.5",
     "fast-xml-parser": "^5.11.0",
     "html-to-text": "^10.0.1",
     "pino": "^10.3.1",
